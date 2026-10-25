@@ -59,7 +59,36 @@ WinCloudMount uses standard Rclone remotes configured in `%APPDATA%\rclone\rclon
 
 ---
 
-## 5. Integrating with WinCloudMount
+## 5. Official Drive Icons & Custom Branding
+
+WinCloudMount includes bundled high-resolution multi-size Windows `.ico` assets in `assets/icons/`:
+- `googledrive.ico` - Google Drive & Google Workspace
+- `onedrive.ico` - Microsoft OneDrive, OneDrive for Business & SharePoint
+- `dropbox.ico` - Dropbox
+- `nextcloud.ico` - Nextcloud & ownCloud
+- `box.ico` - Box.com
+- `mega.ico` - MEGA Cloud
+- `protondrive.ico` - Proton Drive
+- `s3.ico` - Amazon S3, Cloudflare R2, Backblaze B2, Wasabi, & MinIO
+
+### Auto-Detection
+If you leave the `"icon"` property blank, WinCloudMount automatically detects the provider based on your remote name or volume label (e.g. any remote containing `onedrive`, `dropbox`, `nextcloud`, `box`, `mega`, `proton`, `s3`, `b2`, `wasabi`).
+
+### Custom Icon Specification
+You can also explicitly specify an icon in `config/drives.json`:
+```json
+{
+  "name": "onedrive-office",
+  "remote": "onedrive_work:",
+  "drive_letter": "F:",
+  "volume_name": "OneDrive - Office",
+  "icon": "assets/icons/onedrive.ico"
+}
+```
+
+---
+
+## 6. Integrating with WinCloudMount
 
 Once remotes are configured, append them to `config/drives.json`:
 

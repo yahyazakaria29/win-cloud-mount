@@ -148,24 +148,79 @@ function Wait-ForNetworkConnection {
     return $false
 }
 
+function Resolve-DriveIcon {
+    param (
+        [string]$IconPath,
+        [string]$RemoteName,
+        [string]$VolumeLabel,
+        [string]$ConfigName
+    )
+    # 1. Explicit path or shorthand provider name
+    if ($IconPath) {
+        if (-not [System.IO.Path]::IsPathRooted($IconPath)) {
+            $candidate = Join-Path $ProjectRoot $IconPath
+            if (Test-Path $candidate) { return $candidate }
+        } elseif (Test-Path $IconPath) {
+            return $IconPath
+        }
+
+        # Check shorthand name e.g. "onedrive" -> assets/icons/onedrive.ico
+        $cleanName = [System.IO.Path]::GetFileNameWithoutExtension($IconPath).ToLower()
+        $candidate = Join-Path $ProjectRoot "assets\icons\$cleanName.ico"
+        if (Test-Path $candidate) { return $candidate }
+    }
+
+    # 2. Smart auto-detection from Remote, VolumeLabel, or ConfigName
+    $identifier = "$RemoteName $VolumeLabel $ConfigName".ToLower()
+    $providerMap = @{
+        "onedrive"    = "onedrive.ico"
+        "sharepoint"  = "onedrive.ico"
+        "dropbox"     = "dropbox.ico"
+        "nextcloud"   = "nextcloud.ico"
+        "owncloud"    = "nextcloud.ico"
+        "box"         = "box.ico"
+        "mega"        = "mega.ico"
+        "proton"      = "protondrive.ico"
+        "s3"          = "s3.ico"
+        "amazon"      = "s3.ico"
+        "wasabi"      = "s3.ico"
+        "backblaze"   = "s3.ico"
+        "b2"          = "s3.ico"
+        "minio"       = "s3.ico"
+        "google"      = "googledrive.ico"
+        "gdrive"      = "googledrive.ico"
+    }
+
+    foreach ($k in $providerMap.Keys) {
+        if ($identifier -match $k) {
+            $cand = Join-Path $ProjectRoot "assets\icons\$($providerMap[$k])"
+            if (Test-Path $cand) { return $cand }
+        }
+    }
+
+    # 3. Default fallback
+    $defaultCandidate = Join-Path $ProjectRoot "assets\icons\googledrive.ico"
+    if (Test-Path $defaultCandidate) { return $defaultCandidate }
+    return $null
+}
+
 function Set-DriveIcon {
     param (
         [string]$DriveLetter,
         [string]$IconPath,
-        [string]$VolumeLabel
+        [string]$VolumeLabel,
+        [string]$RemoteName,
+        [string]$ConfigName
     )
-    if (-not $IconPath) {
-        $candidate = Join-Path $ProjectRoot "assets\icons\googledrive.ico"
-        if (Test-Path $candidate) { $IconPath = $candidate }
-    }
-    if ($IconPath -and (Test-Path $IconPath)) {
+    $resolvedIcon = Resolve-DriveIcon -IconPath $IconPath -RemoteName $RemoteName -VolumeLabel $VolumeLabel -ConfigName $ConfigName
+    if ($resolvedIcon -and (Test-Path $resolvedIcon)) {
         $letterOnly = $DriveLetter.ToUpper().TrimEnd(':')
 
         # Method 1: Current User Classes (Primary location evaluated by Windows 11 Explorer for per-user drive icons)
         $classesKey = "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\$letterOnly\DefaultIcon"
         try {
             if (-not (Test-Path $classesKey)) { New-Item -Path $classesKey -Force | Out-Null }
-            Set-ItemProperty -Path $classesKey -Name "(Default)" -Value $IconPath -Force
+            Set-ItemProperty -Path $classesKey -Name "(Default)" -Value $resolvedIcon -Force
         } catch {}
 
         if ($VolumeLabel) {
@@ -180,7 +235,7 @@ function Set-DriveIcon {
         $explorerKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\$letterOnly\DefaultIcon"
         try {
             if (-not (Test-Path $explorerKey)) { New-Item -Path $explorerKey -Force | Out-Null }
-            Set-ItemProperty -Path $explorerKey -Name "(Default)" -Value $IconPath -Force
+            Set-ItemProperty -Path $explorerKey -Name "(Default)" -Value $resolvedIcon -Force
         } catch {}
 
         # Broadcast Shell change notification
@@ -281,7 +336,7 @@ function Start-DriveMount {
 
     # Wait briefly and verify mount health
     Start-Sleep -Seconds 3
-    Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon -VolumeLabel $volName
+    Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon -VolumeLabel $volName -RemoteName $DriveConfig.remote -ConfigName $DriveConfig.name
     $checkDrive = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
     if ($checkDrive -or (-not $proc.HasExited)) {
         Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id))" -ForegroundColor Green
