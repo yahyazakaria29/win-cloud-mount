@@ -157,7 +157,6 @@ function Start-DriveMount {
         $DriveConfig.remote,
         $driveLet,
         "--volname=`"$volName`"",
-        "--network-mode",
         "--vfs-cache-mode=full",
         "--vfs-cache-max-size=$cacheSize",
         "--vfs-cache-max-age=24h",
@@ -179,9 +178,9 @@ function Start-DriveMount {
         "--log-level=NOTICE"
     )
 
-    if ($DriveConfig.network_mode -eq $false) {
-        # Allow disabling network mode if explicitly configured in drives.json
-        $args = $args | Where-Object { $_ -ne "--network-mode" }
+    if ($DriveConfig.network_mode -eq $true) {
+        # Optional network mode if user explicitly wants it in drives.json
+        $args += "--network-mode"
     }
 
     if ($DriveConfig.read_only -eq $true) {
