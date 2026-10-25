@@ -14,15 +14,15 @@ Seamlessly mount unlimited cloud storage accounts (Google Drive, OneDrive, Nextc
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
 </p>
 
-<p align="center">
-  <img src="docs/images/showcase.png" alt="WinCloudMount in Windows 11 File Explorer" width="950">
-</p>
+🌐 [English](README.md) • [Bahasa Indonesia](README.id.md)
+
+[ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 🛠️ Architecture ](#️-architecture) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
 
 ---
 
-🌐 **Language / Bahasa:** [English](README.md) • [Bahasa Indonesia](README.id.md)
-
-[ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 🛠️ Architecture ](#️-architecture) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
+<p align="center">
+  <img src="docs/images/showcase.png" alt="WinCloudMount in Windows 11 File Explorer" width="950">
+</p>
 
 ---
 
