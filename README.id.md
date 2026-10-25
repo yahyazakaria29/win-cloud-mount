@@ -17,7 +17,7 @@ Mount akun Google Drive, OneDrive, Nextcloud, Mega, Dropbox, dan S3 tanpa batas 
 
 🌐 [English](README.md) • [Bahasa Indonesia](README.id.md)
 
-[ 🚀 Panduan Cepat ](#-panduan-cepat-kurang-dari-5-menit) • [ 🎨 Provider & NAS yang Didukung ](#-bundel-icon-resmi--auto-detection) • [ 📊 Perbandingan Performa ](#-mengapa-wincloudmount-dibanding-aplikasi-komersial) • [ ☕ Dukungan ](#-dukungan--donasi) • [ 🗑️ Panduan Uninstall ](#️-prosedur-uninstall-pembersihan-tuntas)
+[ 🚀 Panduan Cepat ](#-panduan-cepat-kurang-dari-5-menit) • [ 🎨 Provider & NAS yang Didukung ](#-bundel-icon-resmi--auto-detection) • [ 📊 Perbandingan Performa ](#-mengapa-wincloudmount-dibanding-aplikasi-komersial) • [ ☕ Dukungan ](#-dukungan--traktir-kopi) • [ 🗑️ Panduan Uninstall ](#️-prosedur-uninstall-pembersihan-tuntas)
 
 ---
 
@@ -197,16 +197,26 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 
 ---
 
-## ☕ Dukungan & Donasi
+<div align="center">
 
-Jika **WinCloudMount** membantu menghemat RAM laptop Anda dan menghemat biaya langganan aplikasi virtual drive berbayar, Anda dapat mendukung pengembangannya:
+## ☕ Dukungan & Traktir Kopi
 
-| Platform | Jangkauan | Metode Pembayaran yang Didukung |
-| :--- | :--- | :--- |
-| [![Saweria](https://img.shields.io/badge/Saweria-Traktir_Kopi_QRIS-FFC107?style=for-the-badge&logo=google-pay&logoColor=black)](https://saweria.co/anakrantau29) | **Indonesia (Domestik)** | QRIS, ShopeePay, GoPay, OVO, DANA, Virtual Account Bank |
-| [![Ko-fi](https://img.shields.io/badge/Ko--fi-Dukung_Pengembangan-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/anakrantau29) | **Internasional / Global** | Kartu Kredit/Debit, PayPal, Apple Pay, Google Pay |
+Jika **WinCloudMount** membantu menghemat RAM laptop Anda dan menghemat biaya langganan aplikasi virtual drive berbayar, Anda dapat mentraktir secangkir kopi untuk mendukung pengembangannya!
 
-*Dukungan Anda menjaga proyek ini tetap aktif, terus diperbarui, dan gratis selamanya!*
+<p align="center">
+  <a href="https://saweria.co/anakrantau29">
+    <img src="https://img.shields.io/badge/Saweria-Traktir_Kopi_(QRIS)-FFC107?style=for-the-badge&logo=google-pay&logoColor=black" alt="Traktir Kopi via Saweria">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://ko-fi.com/anakrantau29">
+    <img src="https://img.shields.io/badge/Ko--fi-Buy_Me_a_Coffee-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Dukung di Ko-fi">
+  </a>
+</p>
+
+<sub>🇮🇩 **Indonesia:** QRIS • ShopeePay • GoPay • OVO • DANA • Virtual Account Bank</sub><br>
+<sub>🌍 **Internasional:** Kartu Kredit/Debit • PayPal • Apple Pay • Google Pay</sub>
+
+</div>
 
 ---
 

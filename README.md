@@ -17,7 +17,7 @@ Seamlessly mount unlimited cloud storage accounts (Google Drive, OneDrive, Nextc
 
 🌐 [English](README.md) • [Bahasa Indonesia](README.id.md)
 
-[ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 🛠️ Architecture ](#️-architecture) • [ ☕ Support ](#-support--donations) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
+[ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 🛠️ Architecture ](#️-architecture) • [ ☕ Support ](#-support-the-project) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
 
 ---
 
@@ -248,16 +248,26 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 
 ---
 
-## ☕ Support & Donations
+<div align="center">
 
-If **WinCloudMount** saves your system RAM and cloud subscription budget, consider supporting ongoing development:
+## ☕ Support the Project
 
-| Platform | Audience | Supported Payment Methods |
-| :--- | :--- | :--- |
-| [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support_Development-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/anakrantau29) | **International / Global** | Credit/Debit Cards, PayPal, Apple Pay, Google Pay |
-| [![Saweria](https://img.shields.io/badge/Saweria-Traktir_Kopi_QRIS-FFC107?style=for-the-badge&logo=google-pay&logoColor=black)](https://saweria.co/anakrantau29) | **Indonesia (Domestik)** | QRIS, ShopeePay, GoPay, OVO, DANA, Virtual Account Bank |
+If **WinCloudMount** saves your system RAM and cloud subscription budget, consider buying me a coffee to support ongoing development!
 
-*Your support helps maintain the project, add new cloud backends, and keep it free & open-source forever!*
+<p align="center">
+  <a href="https://ko-fi.com/anakrantau29">
+    <img src="https://img.shields.io/badge/Ko--fi-Buy_Me_a_Coffee-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Buy Me a Coffee on Ko-fi">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://saweria.co/anakrantau29">
+    <img src="https://img.shields.io/badge/Saweria-Traktir_Kopi_(QRIS)-FFC107?style=for-the-badge&logo=google-pay&logoColor=black" alt="Traktir Kopi via Saweria">
+  </a>
+</p>
+
+<sub>🌍 **Global:** Credit Card • PayPal • Apple Pay • Google Pay</sub><br>
+<sub>🇮🇩 **Indonesia:** QRIS • ShopeePay • GoPay • OVO • DANA • Bank Transfer</sub>
+
+</div>
 
 ---
 
