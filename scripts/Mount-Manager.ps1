@@ -129,19 +129,21 @@ function Clear-StaleNetworkMountPoints {
 
 function Wait-ForNetworkConnection {
     param (
-        [string]$TargetHost = "www.googleapis.com",
-        [int]$TimeoutSeconds = 25
+        [string[]]$TargetHosts = @("www.googleapis.com", "login.microsoftonline.com", "one.one.one.one"),
+        [int]$TimeoutSeconds = 60
     )
-    Write-Host "Verifying internet and DNS resolution ($TargetHost)..." -ForegroundColor Cyan
+    Write-Host "Verifying internet and DNS resolution ($($TargetHosts[0])...)..." -ForegroundColor Cyan
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     while ($sw.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
-        try {
-            $ips = [System.Net.Dns]::GetHostAddresses($TargetHost)
-            if ($ips -and $ips.Count -gt 0) {
-                Write-Host "[OK] Network is online. DNS resolved successfully." -ForegroundColor Green
-                return $true
-            }
-        } catch {}
+        foreach ($hostName in $TargetHosts) {
+            try {
+                $ips = [System.Net.Dns]::GetHostAddresses($hostName)
+                if ($ips -and $ips.Count -gt 0) {
+                    Write-Host "[OK] Network is online. DNS resolved '$hostName' successfully." -ForegroundColor Green
+                    return $true
+                }
+            } catch {}
+        }
         Start-Sleep -Seconds 2
     }
     Write-Warning "Network connectivity check reached timeout ($TimeoutSeconds s). Proceeding with mount..."
@@ -336,17 +338,27 @@ function Start-DriveMount {
     Write-Host "-> Launching mount: $($DriveConfig.remote) => $driveLet [$volName]" -ForegroundColor Cyan
     Write-Host "   Cache: $cacheDir (Cap: $cacheSize) | Buffer: $bufferSize" -ForegroundColor Gray
 
-    $proc = Start-Process -FilePath $rcloneExe -ArgumentList $argString -WindowStyle Hidden -PassThru
+    # Retry loop (up to 3 total attempts) to handle post-boot DNS/network settling
+    $maxAttempts = 3
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        if ($attempt -gt 1) {
+            Write-Host "   -> Network settling... retry attempt $attempt of $maxAttempts for $driveLet in 4s..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 4
+        }
 
-    # Wait briefly and verify mount health
-    Start-Sleep -Seconds 3
-    Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon -VolumeLabel $volName -RemoteName $DriveConfig.remote -ConfigName $DriveConfig.name
-    $checkDrive = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
-    if ($checkDrive -or (-not $proc.HasExited)) {
-        Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id))" -ForegroundColor Green
-    } else {
-        Write-Host "   [FAILED] Failed to mount $driveLet. Check log: $logFile" -ForegroundColor Red
+        $proc = Start-Process -FilePath $rcloneExe -ArgumentList $argString -WindowStyle Hidden -PassThru
+
+        # Wait briefly and verify mount health
+        Start-Sleep -Seconds 3
+        $checkDrive = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
+        if ($checkDrive -or (-not $proc.HasExited)) {
+            Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon -VolumeLabel $volName -RemoteName $DriveConfig.remote -ConfigName $DriveConfig.name
+            Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id))" -ForegroundColor Green
+            return
+        }
     }
+
+    Write-Host "   [FAILED] Failed to mount $driveLet after $maxAttempts attempts. Check log: $logFile" -ForegroundColor Red
 }
 
 function Stop-DriveMount {

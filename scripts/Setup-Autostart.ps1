@@ -37,7 +37,7 @@ function Enable-Autostart {
 
     $taskAction = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$VbsPath`"" -WorkingDirectory (Split-Path -Parent $VbsPath)
     $taskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-    $taskTrigger.Delay = "PT5S" # 5-second post-logon buffer to ensure networking/DNS initializes
+    $taskTrigger.Delay = "PT10S" # 10-second post-logon buffer to ensure networking/DNS initializes
     $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Days 365) -Priority 5
 
     try {
