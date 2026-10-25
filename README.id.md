@@ -145,7 +145,25 @@ WinCloudMount menyertakan bundel file `.ico` resmi multi-resolusi (16x16 hingga 
 ---
 
 ## 🗑️ Prosedur Uninstall (Pembersihan Tuntas)
-Jika ingin melepas atau mencopot instalasi secara bersih:
+
+### Opsi A: Uninstall satu baris (pembersihan instan)
+Buka PowerShell biasa lalu tempel perintah:
+
+```powershell
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/uninstall.ps1 | iex
+```
+
+Yang dilakukan skrip ini secara interaktif:
+1. Menghentikan semua daemon virtual cloud drive dengan aman.
+2. Menghapus tugas autostart `WinCloudMount-Autostart` dari Task Scheduler.
+3. Membersihkan kustomisasi registri Windows Explorer (label, ikon, & mountpoint jaringan).
+4. Menanyakan apakah Anda ingin menghapus file cache lokal VFS di disk.
+5. Menanyakan apakah Anda ingin mencopot WinFsp dan Rclone via Winget.
+6. Menghapus folder instalasi `%LOCALAPPDATA%\WinCloudMount` secara bersih tanpa sisa.
+
+### Opsi B: Uninstall manual
+Jika Anda menginstal lewat git clone atau ZIP lokal:
+
 ```powershell
 # Lepas drive, hapus autostart, dan bersihkan registri explorer
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1
@@ -156,11 +174,6 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 # Hapus total termasuk uninstall WinFsp dan Rclone via Winget
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache -RemovePrerequisites
 ```
-
-> 💡 **Instal lewat perintah satu baris?** File Anda ada di `%LOCALAPPDATA%\WinCloudMount`. Jalankan `cd "$env:LOCALAPPDATA\WinCloudMount"` terlebih dahulu, lalu perintah di atas. Setelah selesai, hapus foldernya:
-> ```powershell
-> cd ~; Remove-Item "$env:LOCALAPPDATA\WinCloudMount" -Recurse -Force
-> ```
 
 ---
 

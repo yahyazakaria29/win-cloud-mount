@@ -198,7 +198,23 @@ See [docs/PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md) for step-by-step connecti
 
 ## 🗑️ Uninstallation & Teardown
 
-To cleanly remove WinCloudMount, stop background daemons, remove Task Scheduler autostart, and revert Windows Explorer customizations:
+### Option A: One-line uninstaller (instant cleanup)
+Open PowerShell and paste:
+
+```powershell
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/uninstall.ps1 | iex
+```
+
+What it does interactively:
+1. Stops all running virtual cloud drive daemons safely.
+2. Removes the `WinCloudMount-Autostart` scheduled task.
+3. Cleans custom drive labels, icons, and stale mount points from the Windows Registry (`HKCU`).
+4. Asks if you want to purge local offline VFS cache files.
+5. Asks if you want to uninstall WinFsp and Rclone via Winget.
+6. Deletes the `%LOCALAPPDATA%\WinCloudMount` installation directory cleanly.
+
+### Option B: Manual uninstaller
+If you cloned the repository manually, run the local uninstaller script:
 
 ```powershell
 # Standard unmount, remove autostart task, and clean registry drive branding
@@ -210,11 +226,6 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 # Full wipe: unmount + remove autostart + purge cache + uninstall WinFsp & Rclone via Winget
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache -RemovePrerequisites
 ```
-
-> 💡 **Installed with the one-liner?** Your files live in `%LOCALAPPDATA%\WinCloudMount`. Run `cd "$env:LOCALAPPDATA\WinCloudMount"` first, then the command above. Afterwards, delete the folder itself:
-> ```powershell
-> cd ~; Remove-Item "$env:LOCALAPPDATA\WinCloudMount" -Recurse -Force
-> ```
 
 ---
 
