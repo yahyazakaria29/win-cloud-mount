@@ -78,10 +78,10 @@ If you leave the `"icon"` property blank, WinCloudMount automatically detects th
 You can also explicitly specify an icon in `config/drives.json`:
 ```json
 {
-  "name": "onedrive-office",
-  "remote": "onedrive_work:",
+  "name": "onedrive-campus",
+  "remote": "onedrive_campus:",
   "drive_letter": "F:",
-  "volume_name": "OneDrive - Office",
+  "volume_name": "OneDrive - Campus",
   "icon": "assets/icons/onedrive.ico"
 }
 ```
@@ -98,7 +98,7 @@ Once remotes are configured, append them to `config/drives.json`:
     "name": "gdrive-personal",
     "remote": "gdrive_personal:",
     "drive_letter": "E:",
-    "volume_name": "GoogleDrive - Work",
+    "volume_name": "GoogleDrive - Personal",
     "cache_dir": ".cache/gdrive_personal",
     "cache_size": "20G"
   },
