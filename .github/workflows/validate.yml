@@ -24,7 +24,7 @@ jobs:
       - name: Validate PowerShell Script Syntax
         shell: pwsh
         run: |
-          $scripts = Get-ChildItem -Path .\scripts\ -Filter *.ps1
+          $scripts = @(Get-ChildItem -Path .\scripts\ -Filter *.ps1) + @(Get-Item .\install.ps1)
           foreach ($s in $scripts) {
               Write-Host "Parsing syntax for $($s.Name)..."
               $errors = $null
