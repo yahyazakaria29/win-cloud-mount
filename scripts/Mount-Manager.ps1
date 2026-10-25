@@ -157,6 +157,7 @@ function Start-DriveMount {
         $DriveConfig.remote,
         $driveLet,
         "--volname=`"$volName`"",
+        "--network-mode",
         "--vfs-cache-mode=full",
         "--vfs-cache-max-size=$cacheSize",
         "--vfs-cache-max-age=24h",
@@ -167,12 +168,21 @@ function Start-DriveMount {
         "--vfs-read-chunk-size-limit=$readChunkLimit",
         "--drive-chunk-size=$uploadChunk",
         "--vfs-fast-fingerprint",
-        "--dir-cache-time=1h",
-        "--attr-timeout=1s",
+        "--dir-cache-time=24h",
+        "--attr-timeout=24h",
+        "--poll-interval=1m",
+        "--drive-pacer-min-sleep=10ms",
+        "--drive-pacer-burst=200",
+        "--links",
         "--no-modtime",
         "--log-file=$logFile",
         "--log-level=NOTICE"
     )
+
+    if ($DriveConfig.network_mode -eq $false) {
+        # Allow disabling network mode if explicitly configured in drives.json
+        $args = $args | Where-Object { $_ -ne "--network-mode" }
+    }
 
     if ($DriveConfig.read_only -eq $true) {
         $args += "--read-only"
