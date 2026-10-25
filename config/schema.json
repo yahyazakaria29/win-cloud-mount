@@ -51,6 +51,10 @@
       "read_only": {
         "type": "boolean",
         "description": "Mount as read-only volume if true."
+      },
+      "icon": {
+        "type": "string",
+        "description": "Absolute or relative path to a .ico file for custom File Explorer branding."
       }
     }
   }

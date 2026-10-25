@@ -9,7 +9,8 @@
     "buffer_size": "16M",
     "read_chunk_size": "16M",
     "read_chunk_limit": "256M",
-    "read_only": false
+    "read_only": false,
+    "icon": "assets/icons/googledrive.ico"
   },
   {
     "name": "gdrive-ut",

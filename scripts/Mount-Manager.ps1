@@ -127,6 +127,48 @@ function Clear-StaleNetworkMountPoints {
     } catch {}
 }
 
+function Wait-ForNetworkConnection {
+    param (
+        [string]$TargetHost = "www.googleapis.com",
+        [int]$TimeoutSeconds = 25
+    )
+    Write-Host "Verifying internet and DNS resolution ($TargetHost)..." -ForegroundColor Cyan
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($sw.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
+        try {
+            $ips = [System.Net.Dns]::GetHostAddresses($TargetHost)
+            if ($ips -and $ips.Count -gt 0) {
+                Write-Host "[OK] Network is online. DNS resolved successfully." -ForegroundColor Green
+                return $true
+            }
+        } catch {}
+        Start-Sleep -Seconds 2
+    }
+    Write-Warning "Network connectivity check reached timeout ($TimeoutSeconds s). Proceeding with mount..."
+    return $false
+}
+
+function Set-DriveIcon {
+    param (
+        [string]$DriveLetter,
+        [string]$IconPath
+    )
+    if (-not $IconPath) {
+        $candidate = Join-Path $ProjectRoot "assets\icons\googledrive.ico"
+        if (Test-Path $candidate) { $IconPath = $candidate }
+    }
+    if ($IconPath -and (Test-Path $IconPath)) {
+        $letterOnly = $DriveLetter.ToUpper().TrimEnd(':')
+        $regKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\$letterOnly\DefaultIcon"
+        try {
+            if (-not (Test-Path $regKey)) {
+                New-Item -Path $regKey -Force | Out-Null
+            }
+            Set-ItemProperty -Path $regKey -Name "(Default)" -Value $IconPath -Force
+        } catch {}
+    }
+}
+
 function Start-DriveMount {
     param ($DriveConfig)
 
@@ -207,6 +249,7 @@ function Start-DriveMount {
 
     # Wait briefly and verify mount health
     Start-Sleep -Seconds 3
+    Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon
     $checkDrive = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
     if ($checkDrive -or (-not $proc.HasExited)) {
         Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id))" -ForegroundColor Green
@@ -336,6 +379,7 @@ if (-not (Test-Prerequisites)) {
 switch ($Action) {
     "start" {
         Write-MountHeader "Starting Configured Virtual Drives"
+        Wait-ForNetworkConnection
         $configs = @(Load-DriveConfig)
         foreach ($c in $configs) {
             if ($DriveLetter) {
