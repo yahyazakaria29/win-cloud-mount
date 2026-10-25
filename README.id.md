@@ -11,12 +11,13 @@ Mount akun Google Drive, OneDrive, Nextcloud, Mega, Dropbox, dan S3 tanpa batas 
   <a href="https://microsoft.com/windows"><img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(64--bit)-0078D6?logo=windows" alt="Platform"></a>
   <a href="https://winfsp.dev"><img src="https://img.shields.io/badge/Engine-WinFsp%20%2B%20Rclone-success" alt="Engine"></a>
   <a href="docs/BENCHMARKS.md"><img src="https://img.shields.io/badge/RAM%20per%20drive-~25MB-brightgreen" alt="Memory Footprint"></a>
+  <a href="https://saweria.co/anakrantau29"><img src="https://img.shields.io/badge/Saweria-Traktir_Kopi-FFC107?logo=google-pay&logoColor=black" alt="Traktir Kopi via Saweria"></a>
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
 </p>
 
 🌐 [English](README.md) • [Bahasa Indonesia](README.id.md)
 
-[ 🚀 Panduan Cepat ](#-panduan-cepat-kurang-dari-5-menit) • [ 🎨 Provider & NAS yang Didukung ](#-bundel-icon-resmi--auto-detection) • [ 📊 Perbandingan Performa ](#-mengapa-wincloudmount-dibanding-aplikasi-komersial) • [ 🗑️ Panduan Uninstall ](#️-prosedur-uninstall-pembersihan-tuntas)
+[ 🚀 Panduan Cepat ](#-panduan-cepat-kurang-dari-5-menit) • [ 🎨 Provider & NAS yang Didukung ](#-bundel-icon-resmi--auto-detection) • [ 📊 Perbandingan Performa ](#-mengapa-wincloudmount-dibanding-aplikasi-komersial) • [ ☕ Dukungan ](#-dukungan--donasi) • [ 🗑️ Panduan Uninstall ](#️-prosedur-uninstall-pembersihan-tuntas)
 
 ---
 
@@ -193,6 +194,19 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 * **Tanpa Perantara Cloud**: Token OAuth dan enkripsi tersimpan lokal di `%APPDATA%\rclone\rclone.conf` pada laptop Anda sendiri.
 * **Aman dari Kebocoran Git**: File `drives.json`, cache VFS, dan kredensial otomatis diabaikan oleh `.gitignore`.
 * **Tanpa Hak Akses Administrator**: Skrip berjalan normal pada level user biasa.
+
+---
+
+## ☕ Dukungan & Donasi
+
+Jika **WinCloudMount** membantu menghemat RAM laptop Anda dan menghemat biaya langganan aplikasi virtual drive berbayar, Anda dapat mendukung pengembangannya:
+
+| Platform | Jangkauan | Metode Pembayaran yang Didukung |
+| :--- | :--- | :--- |
+| [![Saweria](https://img.shields.io/badge/Saweria-Traktir_Kopi_QRIS-FFC107?style=for-the-badge&logo=google-pay&logoColor=black)](https://saweria.co/anakrantau29) | **Indonesia (Domestik)** | QRIS, ShopeePay, GoPay, OVO, DANA, Virtual Account Bank |
+| [![Ko-fi](https://img.shields.io/badge/Ko--fi-Dukung_Pengembangan-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/anakrantau29) | **Internasional / Global** | Kartu Kredit/Debit, PayPal, Apple Pay, Google Pay |
+
+*Dukungan Anda menjaga proyek ini tetap aktif, terus diperbarui, dan gratis selamanya!*
 
 ---
 

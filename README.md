@@ -11,12 +11,13 @@ Seamlessly mount unlimited cloud storage accounts (Google Drive, OneDrive, Nextc
   <a href="https://microsoft.com/windows"><img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(64--bit)-0078D6?logo=windows" alt="Platform"></a>
   <a href="https://winfsp.dev"><img src="https://img.shields.io/badge/Engine-WinFsp%20%2B%20Rclone-success" alt="Engine"></a>
   <a href="docs/BENCHMARKS.md"><img src="https://img.shields.io/badge/RAM%20per%20drive-~25MB-brightgreen" alt="Memory Footprint"></a>
+  <a href="https://ko-fi.com/anakrantau29"><img src="https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
 </p>
 
 🌐 [English](README.md) • [Bahasa Indonesia](README.id.md)
 
-[ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 🛠️ Architecture ](#️-architecture) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
+[ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 🛠️ Architecture ](#️-architecture) • [ ☕ Support ](#-support--donations) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
 
 ---
 
@@ -244,6 +245,19 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 
 * **Zero Cloud Intermediaries:** Credentials, OAuth tokens, and encryption keys remain exclusively on your local machine in `%APPDATA%\rclone\rclone.conf`.
 * **Private by Default:** `config/drives.json` and all local cache/token files are strictly ignored by `.gitignore` to prevent accidental credential leakage to Git remotes.
+
+---
+
+## ☕ Support & Donations
+
+If **WinCloudMount** saves your system RAM and cloud subscription budget, consider supporting ongoing development:
+
+| Platform | Audience | Supported Payment Methods |
+| :--- | :--- | :--- |
+| [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support_Development-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/anakrantau29) | **International / Global** | Credit/Debit Cards, PayPal, Apple Pay, Google Pay |
+| [![Saweria](https://img.shields.io/badge/Saweria-Traktir_Kopi_QRIS-FFC107?style=for-the-badge&logo=google-pay&logoColor=black)](https://saweria.co/anakrantau29) | **Indonesia (Domestik)** | QRIS, ShopeePay, GoPay, OVO, DANA, Virtual Account Bank |
+
+*Your support helps maintain the project, add new cloud backends, and keep it free & open-source forever!*
 
 ---
 
