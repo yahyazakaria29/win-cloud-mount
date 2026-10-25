@@ -275,7 +275,9 @@ function Start-DriveMount {
     # Prepare Cache Directory
     $cacheDir = $DriveConfig.cache_dir
     if (-not $cacheDir) {
-        $cacheDir = Join-Path $ProjectRoot "cache\$($DriveConfig.name)"
+        $cacheDir = Join-Path $ProjectRoot ".cache\$($DriveConfig.name)"
+    } elseif (-not [System.IO.Path]::IsPathRooted($cacheDir)) {
+        $cacheDir = Join-Path $ProjectRoot $cacheDir
     }
     if (-not (Test-Path $cacheDir)) {
         New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null

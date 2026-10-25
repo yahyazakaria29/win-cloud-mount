@@ -133,12 +133,22 @@ if ($PurgeCache) {
         try {
             $configs = Get-Content -Raw -Path $ConfigFile | ConvertFrom-Json
             foreach ($c in $configs) {
-                if ($c.cache_dir -and (Test-Path $c.cache_dir)) {
-                    Write-Host "  Deleting cache folder: $($c.cache_dir)" -ForegroundColor Gray
-                    Remove-Item -Path $c.cache_dir -Recurse -Force -ErrorAction SilentlyContinue
+                $cDir = $c.cache_dir
+                if ($cDir -and -not [System.IO.Path]::IsPathRooted($cDir)) {
+                    $cDir = Join-Path $ProjectRoot $cDir
+                }
+                if ($cDir -and (Test-Path $cDir)) {
+                    Write-Host "  Deleting cache folder: $cDir" -ForegroundColor Gray
+                    Remove-Item -Path $cDir -Recurse -Force -ErrorAction SilentlyContinue
                 }
             }
         } catch {}
+    }
+    # 6. Optional Project .cache Wipe
+    $projectDotCache = Join-Path $ProjectRoot ".cache"
+    if (Test-Path $projectDotCache) {
+        Write-Host "  Deleting project cache folder: $projectDotCache" -ForegroundColor Gray
+        Remove-Item -Path $projectDotCache -Recurse -Force -ErrorAction SilentlyContinue
     }
     Write-Host "  [OK] Cache directories purged." -ForegroundColor Green
 } else {

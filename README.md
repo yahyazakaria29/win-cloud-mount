@@ -84,7 +84,7 @@ Edit `config/drives.json` to assign your cloud remotes to drive letters:
     "remote": "gdrive_personal:",
     "drive_letter": "E:",
     "volume_name": "GoogleDrive - Personal",
-    "cache_dir": "D:/HermesAgent/cache/gdrive_personal",
+    "cache_dir": ".cache/gdrive_personal",
     "cache_size": "20G"
   },
   {
@@ -92,7 +92,7 @@ Edit `config/drives.json` to assign your cloud remotes to drive letters:
     "remote": "gdrive_work:",
     "drive_letter": "F:",
     "volume_name": "GoogleDrive - Work",
-    "cache_dir": "D:/HermesAgent/cache/gdrive_work",
+    "cache_dir": ".cache/gdrive_work",
     "cache_size": "15G"
   }
 ]
