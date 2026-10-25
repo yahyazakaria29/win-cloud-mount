@@ -61,12 +61,40 @@ For complete technical specifications, see [ARCHITECTURE.md](docs/ARCHITECTURE.m
 
 ## 🚀 Quick Start Guide
 
-### 1. Automated Prerequisites Installation
-Open PowerShell and run the automated installer. It installs **WinFsp** and **Rclone** silently via Windows Package Manager (`winget`):
+### 1. Install (choose one option)
+
+Both options produce the same result. Pick whichever you are comfortable with.
+
+#### Option A: One-line install (recommended for most users)
+Open **PowerShell** (no need for "Run as administrator") and paste:
 
 ```powershell
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
+```
+
+What it does:
+1. Downloads WinCloudMount to `%LOCALAPPDATA%\WinCloudMount` (no Git required).
+2. Installs **WinFsp** and **Rclone** via `winget`. Windows may show one permission prompt (UAC) for the WinFsp driver.
+3. Creates `config\drives.json` from the example template (an existing one is **never overwritten**).
+4. Offers to open `rclone config` so you can connect your first cloud account.
+
+Running the same command again later **updates** the scripts and keeps your config, cache and logs.
+
+> 🔒 **Prefer to read the script first?** That's good practice. Download it, review it, then run it:
+> ```powershell
+> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 -OutFile install.ps1
+> notepad install.ps1
+> powershell -ExecutionPolicy Bypass -File .\install.ps1
+> ```
+> Custom location: set `$env:WCM_INSTALL_DIR = "D:\WinCloudMount"` before running.
+
+#### Option B: Manual install (Git / ZIP)
+```powershell
+git clone https://github.com/yahyazakaria29/win-cloud-mount.git
+cd win-cloud-mount
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\Install-Prerequisites.ps1
 ```
+*No Git? Click **Code → Download ZIP** on GitHub, extract it, open PowerShell in that folder, and run the last command.*
 
 ### 2. Configure Your Cloud Accounts
 Add your cloud storage accounts using Rclone's interactive CLI:
@@ -182,6 +210,11 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 # Full wipe: unmount + remove autostart + purge cache + uninstall WinFsp & Rclone via Winget
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache -RemovePrerequisites
 ```
+
+> 💡 **Installed with the one-liner?** Your files live in `%LOCALAPPDATA%\WinCloudMount`. Run `cd "$env:LOCALAPPDATA\WinCloudMount"` first, then the command above. Afterwards, delete the folder itself:
+> ```powershell
+> cd ~; Remove-Item "$env:LOCALAPPDATA\WinCloudMount" -Recurse -Force
+> ```
 
 ---
 

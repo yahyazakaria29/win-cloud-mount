@@ -35,12 +35,40 @@ Software komersial seperti **Air Live Drive** atau **RaiDrive** membatasi fitur 
 
 ## 🚀 Panduan Cepat (Kurang dari 5 Menit)
 
-### 1. Instalasi Otomatis (Prerequisites)
-Buka PowerShell biasa (tidak memerlukan hak Administrator/UAC), lalu jalankan perintah:
+### 1. Instalasi (pilih salah satu)
+
+Kedua opsi menghasilkan instalasi yang sama. Pilih yang paling nyaman.
+
+#### Opsi A: Instal satu baris (disarankan untuk kebanyakan pengguna)
+Buka **PowerShell** biasa (tidak perlu "Run as administrator"), lalu tempel:
+
 ```powershell
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
+```
+
+Yang dilakukan perintah ini:
+1. Mengunduh WinCloudMount ke `%LOCALAPPDATA%\WinCloudMount` (tidak perlu Git).
+2. Memasang **WinFsp** dan **Rclone** lewat `winget`. Windows mungkin menampilkan satu kali konfirmasi izin (UAC) untuk driver WinFsp.
+3. Membuat `config\drives.json` dari template contoh (file yang sudah ada **tidak pernah ditimpa**).
+4. Menawarkan untuk membuka `rclone config` agar Anda bisa langsung menghubungkan akun cloud pertama.
+
+Menjalankan perintah yang sama di lain waktu akan **memperbarui** skrip tanpa mengubah konfigurasi, cache, dan log Anda.
+
+> 🔒 **Ingin membaca skripnya dulu?** Itu kebiasaan yang baik. Unduh, periksa, lalu jalankan:
+> ```powershell
+> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 -OutFile install.ps1
+> notepad install.ps1
+> powershell -ExecutionPolicy Bypass -File .\install.ps1
+> ```
+> Lokasi instal lain: jalankan `$env:WCM_INSTALL_DIR = "D:\WinCloudMount"` sebelum perintah di atas.
+
+#### Opsi B: Instal manual (Git / ZIP)
+```powershell
+git clone https://github.com/yahyazakaria29/win-cloud-mount.git
+cd win-cloud-mount
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\Install-Prerequisites.ps1
 ```
-*Skrip ini otomatis memasang driver kernel **WinFsp** dan biner **Rclone** secara resmi via Windows Package Manager (`winget`).*
+*Tidak punya Git? Klik **Code → Download ZIP** di GitHub, ekstrak, buka PowerShell di folder tersebut, lalu jalankan perintah terakhir.*
 
 ### 2. Hubungkan Akun Cloud
 Jalankan wizard konfigurasi rclone:
@@ -128,6 +156,11 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 # Hapus total termasuk uninstall WinFsp dan Rclone via Winget
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache -RemovePrerequisites
 ```
+
+> 💡 **Instal lewat perintah satu baris?** File Anda ada di `%LOCALAPPDATA%\WinCloudMount`. Jalankan `cd "$env:LOCALAPPDATA\WinCloudMount"` terlebih dahulu, lalu perintah di atas. Setelah selesai, hapus foldernya:
+> ```powershell
+> cd ~; Remove-Item "$env:LOCALAPPDATA\WinCloudMount" -Recurse -Force
+> ```
 
 ---
 

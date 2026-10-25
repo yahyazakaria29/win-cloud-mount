@@ -58,7 +58,7 @@ $winfspPaths = @(
     "$env:ProgramFiles\WinFsp",
     "${env:ProgramFiles(x86)}\WinFsp"
 )
-$winfspInstalled = $winfspPaths | Where-Object { Test-Path $_ }
+$winfspInstalled = @($winfspPaths | Where-Object { Test-Path $_ })
 
 if ($winfspInstalled -and (-not $Force)) {
     Write-Success "WinFsp is already installed at: $($winfspInstalled[0])"
@@ -96,9 +96,9 @@ if ($rcloneCmd -and (-not $Force)) {
 # 4. Final verification
 Write-Step "Verifying installation integrity..."
 $verifiedRclone = Get-Command rclone -ErrorAction SilentlyContinue
-$verifiedWinFsp = $winfspPaths | Where-Object { Test-Path $_ }
+$verifiedWinFsp = @($winfspPaths | Where-Object { Test-Path $_ })
 
-if ($verifiedRclone -and $verifiedWinFsp) {
+if ($verifiedRclone -and $verifiedWinFsp.Count -gt 0) {
     Write-Host "`n==========================================================" -ForegroundColor Green
     Write-Host " [SUCCESS] All prerequisites are installed and verified!  " -ForegroundColor Green
     Write-Host " Next step: Configure your remotes via 'rclone config'   " -ForegroundColor White
