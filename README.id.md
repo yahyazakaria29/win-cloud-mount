@@ -12,6 +12,8 @@
 
 🌐 **Language / Bahasa:** [English](README.md) | [Bahasa Indonesia](README.id.md)
 
+[ 🚀 Panduan Cepat ](#-panduan-cepat-kurang-dari-5-menit) • [ 🎨 Provider & NAS yang Didukung ](#-bundel-icon-resmi--auto-detection) • [ 📊 Perbandingan Performa ](#-mengapa-wincloudmount-dibanding-aplikasi-komersial) • [ 🗑️ Panduan Uninstall ](#️-prosedur-uninstall-pembersihan-tuntas)
+
 ---
 
 ## ⚡ Mengapa WinCloudMount Dibanding Aplikasi Komersial?

@@ -13,6 +13,8 @@
 
 🌐 **Language / Bahasa:** [English](README.md) | [Bahasa Indonesia](README.id.md)
 
+[ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 🛠️ Architecture ](#️-architecture) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
+
 ---
 
 ## ⚡ Why WinCloudMount Over Commercial Alternatives?
