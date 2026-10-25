@@ -116,8 +116,21 @@ function Load-DriveConfig {
     }
 }
 
+function Clear-StaleNetworkMountPoints {
+    # Cleans up orphaned Windows Shell network mount point entries that cause disconnected drive icons (red X)
+    try {
+        Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2" -ErrorAction SilentlyContinue |
+            Where-Object { $_.PSChildName -like "*server*" -or $_.PSChildName -like "*rclone*" } |
+            ForEach-Object {
+                Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
+            }
+    } catch {}
+}
+
 function Start-DriveMount {
     param ($DriveConfig)
+
+    Clear-StaleNetworkMountPoints
 
     $driveLet = $DriveConfig.drive_letter.ToUpper()
     if (-not $driveLet.EndsWith(":")) { $driveLet = "$driveLet`:" }
@@ -237,6 +250,8 @@ function Stop-DriveMount {
             }
         }
     }
+
+    Clear-StaleNetworkMountPoints
 }
 
 function Show-Status {
