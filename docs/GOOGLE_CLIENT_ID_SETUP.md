@@ -12,7 +12,7 @@ Membuat Google OAuth Client ID sendiri memberikan keuntungan performa yang masif
 1. Buka browser dan kunjungi: **[console.cloud.google.com](https://console.cloud.google.com)**.
 2. Login menggunakan akun Google Anda.
 3. Di bilah navigasi bagian atas (sebelah logo Google Cloud), klik pemilih project -> klik **"New Project"**.
-4. Beri nama project, misalnya: `WinCloudMount` atau `Rclone-Yahya`.
+4. Beri nama project, misalnya: `WinCloudMount` atau `MyCloudStorage`.
 5. Klik **"Create"**. Tunggu beberapa detik hingga project selesai dibuat, lalu pastikan project tersebut terpilih di bar navigasi atas.
 
 ---

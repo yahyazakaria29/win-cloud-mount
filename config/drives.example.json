@@ -13,11 +13,11 @@
     "icon": "assets/icons/googledrive.ico"
   },
   {
-    "name": "gdrive-ut",
-    "remote": "gdrive_ut:",
+    "name": "gdrive-work",
+    "remote": "gdrive_work:",
     "drive_letter": "F:",
-    "volume_name": "GoogleDrive - Kuliah UT",
-    "cache_dir": ".cache/gdrive_ut",
+    "volume_name": "GoogleDrive - Work",
+    "cache_dir": ".cache/gdrive_work",
     "cache_size": "15G",
     "buffer_size": "16M",
     "read_chunk_size": "16M",

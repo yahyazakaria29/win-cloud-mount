@@ -11,7 +11,7 @@ WinCloudMount uses standard Rclone remotes configured in `%APPDATA%\rclone\rclon
    rclone config
    ```
 2. Press `n` for **New remote**.
-3. Name your remote (e.g. `gdrive_personal` or `gdrive_ut`).
+3. Name your remote (e.g. `gdrive_personal` or `gdrive_backup`).
 4. In storage type, enter `drive` (Google Drive).
 5. Leave `client_id` and `client_secret` blank (or enter your own GCP OAuth credentials for higher API throughput).
 6. Scope: select `1` (Full access all files).
@@ -98,8 +98,8 @@ Once remotes are configured, append them to `config/drives.json`:
     "name": "gdrive-personal",
     "remote": "gdrive_personal:",
     "drive_letter": "E:",
-    "volume_name": "GoogleDrive - Yahya",
-    "cache_dir": "D:/HermesAgent/cache/gdrive_personal",
+    "volume_name": "GoogleDrive - Work",
+    "cache_dir": ".cache/gdrive_personal",
     "cache_size": "20G"
   },
   {
@@ -107,7 +107,7 @@ Once remotes are configured, append them to `config/drives.json`:
     "remote": "onedrive_work:",
     "drive_letter": "F:",
     "volume_name": "OneDrive - Office",
-    "cache_dir": "D:/HermesAgent/cache/onedrive_work",
+    "cache_dir": ".cache/onedrive_work",
     "cache_size": "15G"
   }
 ]
