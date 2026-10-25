@@ -68,7 +68,7 @@ Add your cloud storage accounts using Rclone's interactive CLI:
 ```bash
 rclone config
 ```
-*Follow the interactive prompts (e.g., select `drive` for Google Drive or `onedrive` for Microsoft OneDrive). See [PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md) for detailed configuration steps.*
+*Follow the interactive prompts (e.g., select `drive` for Google Drive or `onedrive` for Microsoft OneDrive). See [PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md) for detailed configuration steps. For Google Drive users experiencing rate limits, follow [GOOGLE_CLIENT_ID_SETUP.md](docs/GOOGLE_CLIENT_ID_SETUP.md) to create your own free dedicated API client.*
 
 ### 3. Setup Your Drives
 Copy the template configuration file:
