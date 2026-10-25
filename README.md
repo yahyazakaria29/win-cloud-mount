@@ -11,6 +11,10 @@
 
 ---
 
+🌐 **Language / Bahasa:** [English](README.md) | [Bahasa Indonesia](README.id.md)
+
+---
+
 ## ⚡ Why WinCloudMount Over Commercial Alternatives?
 
 Commercial utilities like **Air Live Drive** and **RaiDrive** impose arbitrary limits on free tiers (e.g. max 1 drive, transfer throttling, nag screens) and consume hundreds of megabytes of RAM running heavyweight .NET/WPF and embedded Chromium browsers in the background.
