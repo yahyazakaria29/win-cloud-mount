@@ -49,7 +49,7 @@ WinCloudMount combines two battle-tested open-source engines:
                  │
          ┌───────┴───────────────────┐
          ▼                           ▼
-[ Local VFS Cache (D:\Cache) ]   [ Remote Cloud APIs ]
+[ Local VFS Cache (.cache/) ]   [ Remote Cloud APIs ]
 (Instant drag-and-drop)          (TLS 1.3 Asynchronous Upload)
 ```
 

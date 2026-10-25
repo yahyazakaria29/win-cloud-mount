@@ -87,4 +87,4 @@ Read from local sparse file   Download 16MB chunk via HTTP Range request
 
 4. **`--cache-dir <Dedicated Data Drive>`**:
    * *Problem:* Storing cache on partition `C:` risks filling the system drive during heavy workloads, degrading Windows performance.
-   * *Solution:* WinCloudMount explicitly directs cache paths to secondary partitions (e.g., `D:\HermesAgent\cache\...`), enforcing hard capacity ceilings (`--vfs-cache-max-size`).
+   * *Solution:* WinCloudMount isolates cache paths inside the project root (`.cache/<drive_name>`) or configurable secondary partitions, enforcing hard capacity ceilings (`--vfs-cache-max-size`).
