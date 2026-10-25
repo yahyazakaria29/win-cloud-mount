@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WinCloudMountDriveConfig",
+  "description": "Schema for WinCloudMount drive configuration",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["remote", "drive_letter", "volume_name"],
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Identifier name for the drive instance"
+      },
+      "remote": {
+        "type": "string",
+        "description": "Rclone remote name with trailing colon (e.g. 'gdrive:')."
+      },
+      "drive_letter": {
+        "type": "string",
+        "pattern": "^[A-Za-z]:$",
+        "description": "Windows drive letter with trailing colon (e.g. 'E:')."
+      },
+      "volume_name": {
+        "type": "string",
+        "description": "Volume display label visible in Windows File Explorer."
+      },
+      "cache_dir": {
+        "type": "string",
+        "description": "Local path for VFS file caching. Recommend redirecting away from system C: drive."
+      },
+      "cache_size": {
+        "type": "string",
+        "pattern": "^[0-9]+[MGTPmgtp]$",
+        "description": "Maximum size cap for the local disk cache (e.g. '20G')."
+      },
+      "buffer_size": {
+        "type": "string",
+        "pattern": "^[0-9]+[MGTPmgtp]$",
+        "description": "Memory buffer size per open file stream (e.g. '16M')."
+      },
+      "read_chunk_size": {
+        "type": "string",
+        "pattern": "^[0-9]+[MGTPmgtp]$",
+        "description": "Initial chunk size requested during sequential streaming."
+      },
+      "read_chunk_limit": {
+        "type": "string",
+        "pattern": "^[0-9]+[MGTPmgtp]$",
+        "description": "Maximum chunk size ceiling for streaming requests."
+      },
+      "read_only": {
+        "type": "boolean",
+        "description": "Mount as read-only volume if true."
+      }
+    }
+  }
+}

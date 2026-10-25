@@ -1,0 +1,38 @@
+[
+  {
+    "name": "gdrive-personal",
+    "remote": "gdrive_personal:",
+    "drive_letter": "E:",
+    "volume_name": "GoogleDrive - Yahya",
+    "cache_dir": "D:/HermesAgent/cache/gdrive_personal",
+    "cache_size": "20G",
+    "buffer_size": "16M",
+    "read_chunk_size": "16M",
+    "read_chunk_limit": "256M",
+    "read_only": false
+  },
+  {
+    "name": "gdrive-ut",
+    "remote": "gdrive_ut:",
+    "drive_letter": "F:",
+    "volume_name": "GoogleDrive - Kuliah UT",
+    "cache_dir": "D:/HermesAgent/cache/gdrive_ut",
+    "cache_size": "15G",
+    "buffer_size": "16M",
+    "read_chunk_size": "16M",
+    "read_chunk_limit": "256M",
+    "read_only": false
+  },
+  {
+    "name": "onedrive-office",
+    "remote": "onedrive_work:",
+    "drive_letter": "G:",
+    "volume_name": "OneDrive - Corporate",
+    "cache_dir": "D:/HermesAgent/cache/onedrive_work",
+    "cache_size": "15G",
+    "buffer_size": "16M",
+    "read_chunk_size": "16M",
+    "read_chunk_limit": "256M",
+    "read_only": false
+  }
+]

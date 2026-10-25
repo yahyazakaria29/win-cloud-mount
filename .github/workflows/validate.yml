@@ -1,0 +1,36 @@
+name: Validate & Lint
+
+on:
+  push:
+    branches: [ main, develop, feature/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate JSON Schema & Examples
+        shell: pwsh
+        run: |
+          Write-Host "Validating drives.example.json syntax..."
+          $json = Get-Content -Raw .\config\drives.example.json | ConvertFrom-Json
+          if (-not $json) { throw "Invalid drives.example.json format" }
+          Write-Host "drives.example.json is valid JSON with $($json.Count) configured drives."
+
+      - name: Validate PowerShell Script Syntax
+        shell: pwsh
+        run: |
+          $scripts = Get-ChildItem -Path .\scripts\ -Filter *.ps1
+          foreach ($s in $scripts) {
+              Write-Host "Parsing syntax for $($s.Name)..."
+              $errors = $null
+              [System.Management.Automation.Language.Parser]::ParseFile($s.FullName, [ref]$null, [ref]$errors)
+              if ($errors) {
+                  throw "Syntax error found in $($s.Name): $errors"
+              }
+              Write-Host "OK: $($s.Name) syntax is valid."
+          }
