@@ -147,6 +147,8 @@ function Start-DriveMount {
     $volName        = if ($DriveConfig.volume_name) { $DriveConfig.volume_name } else { "CloudDrive - $driveLet" }
     $logFile        = Join-Path $LogDir "$($DriveConfig.name)_mount.log"
 
+    $uploadChunk    = if ($DriveConfig.upload_chunk_size) { $DriveConfig.upload_chunk_size } else { "32M" }
+
     $rcloneCmd = Get-Command rclone -ErrorAction SilentlyContinue
     $rcloneExe = if ($rcloneCmd) { $rcloneCmd.Source } else { "rclone.exe" }
 
@@ -163,6 +165,8 @@ function Start-DriveMount {
         "--buffer-size=$bufferSize",
         "--vfs-read-chunk-size=$readChunkSize",
         "--vfs-read-chunk-size-limit=$readChunkLimit",
+        "--drive-chunk-size=$uploadChunk",
+        "--vfs-fast-fingerprint",
         "--dir-cache-time=1h",
         "--attr-timeout=1s",
         "--no-modtime",
@@ -288,6 +292,7 @@ function Test-Config {
         Write-Host "  Volume Name : $($d.volume_name)"
         Write-Host "  Cache Cap   : $(if ($d.cache_size) { $d.cache_size } else { '20G (default)' })"
         Write-Host "  Buffer Size : $(if ($d.buffer_size) { $d.buffer_size } else { '16M (default)' })"
+        Write-Host "  Upload Chunk: $(if ($d.upload_chunk_size) { $d.upload_chunk_size } else { '32M (optimized)' })"
 
         # Check if remote exists in rclone config
         $checkRemote = & rclone listremotes 2>$null | Where-Object { $_ -eq $d.remote }
