@@ -275,7 +275,7 @@ function Show-Status {
 function Test-Config {
     Write-MountHeader "Testing Configuration Integrity"
     Write-Host "Checking config path: $ConfigFile" -ForegroundColor White
-    $drives = Load-DriveConfig
+    $drives = @(Load-DriveConfig)
     Write-Host "Found $($drives.Count) drive configuration(s):" -ForegroundColor Green
 
     foreach ($d in $drives) {
@@ -304,7 +304,7 @@ if (-not (Test-Prerequisites)) {
 switch ($Action) {
     "start" {
         Write-MountHeader "Starting Configured Virtual Drives"
-        $configs = Load-DriveConfig
+        $configs = @(Load-DriveConfig)
         foreach ($c in $configs) {
             if ($DriveLetter) {
                 $targetNorm = $DriveLetter.ToUpper().TrimEnd(':') + ":"
