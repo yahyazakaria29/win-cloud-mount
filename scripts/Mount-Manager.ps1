@@ -296,45 +296,47 @@ function Start-DriveMount {
     $rcloneCmd = Get-Command rclone -ErrorAction SilentlyContinue
     $rcloneExe = if ($rcloneCmd) { $rcloneCmd.Source } else { "rclone.exe" }
 
-    $args = @(
+    $argList = @(
         "mount",
-        $DriveConfig.remote,
-        $driveLet,
-        "--volname=`"$volName`"",
-        "--vfs-cache-mode=full",
-        "--vfs-cache-max-size=$cacheSize",
-        "--vfs-cache-max-age=24h",
-        "--vfs-cache-poll-interval=1m",
-        "--cache-dir=$cacheDir",
-        "--buffer-size=$bufferSize",
-        "--vfs-read-chunk-size=$readChunkSize",
-        "--vfs-read-chunk-size-limit=$readChunkLimit",
-        "--drive-chunk-size=$uploadChunk",
+        "`"$($DriveConfig.remote)`"",
+        "`"$driveLet`"",
+        "--volname `"$volName`"",
+        "--vfs-cache-mode full",
+        "--vfs-cache-max-size $cacheSize",
+        "--vfs-cache-max-age 24h",
+        "--vfs-cache-poll-interval 1m",
+        "--cache-dir `"$cacheDir`"",
+        "--buffer-size $bufferSize",
+        "--vfs-read-chunk-size $readChunkSize",
+        "--vfs-read-chunk-size-limit $readChunkLimit",
+        "--drive-chunk-size $uploadChunk",
         "--vfs-fast-fingerprint",
-        "--dir-cache-time=24h",
-        "--attr-timeout=24h",
-        "--poll-interval=1m",
-        "--drive-pacer-min-sleep=10ms",
-        "--drive-pacer-burst=200",
+        "--dir-cache-time 24h",
+        "--attr-timeout 24h",
+        "--poll-interval 1m",
+        "--drive-pacer-min-sleep 10ms",
+        "--drive-pacer-burst 200",
         "--links",
         "--no-modtime",
-        "--log-file=$logFile",
-        "--log-level=NOTICE"
+        "--log-file `"$logFile`"",
+        "--log-level NOTICE"
     )
 
     if ($DriveConfig.network_mode -eq $true) {
         # Optional network mode if user explicitly wants it in drives.json
-        $args += "--network-mode"
+        $argList += "--network-mode"
     }
 
     if ($DriveConfig.read_only -eq $true) {
-        $args += "--read-only"
+        $argList += "--read-only"
     }
+
+    $argString = $argList -join " "
 
     Write-Host "-> Launching mount: $($DriveConfig.remote) => $driveLet [$volName]" -ForegroundColor Cyan
     Write-Host "   Cache: $cacheDir (Cap: $cacheSize) | Buffer: $bufferSize" -ForegroundColor Gray
 
-    $proc = Start-Process -FilePath $rcloneExe -ArgumentList $args -WindowStyle Hidden -PassThru
+    $proc = Start-Process -FilePath $rcloneExe -ArgumentList $argString -WindowStyle Hidden -PassThru
 
     # Wait briefly and verify mount health
     Start-Sleep -Seconds 3
@@ -468,7 +470,7 @@ if (-not (Test-Prerequisites)) {
 switch ($Action) {
     "start" {
         Write-MountHeader "Starting Configured Virtual Drives"
-        Wait-ForNetworkConnection
+        $null = Wait-ForNetworkConnection
         $configs = @(Load-DriveConfig)
         foreach ($c in $configs) {
             if ($DriveLetter) {
