@@ -14,6 +14,10 @@ Mount akun Google Drive, OneDrive, Nextcloud, Mega, Dropbox, dan S3 tanpa batas 
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
 </p>
 
+<p align="center">
+  <img src="docs/images/showcase.png" alt="Tampilan WinCloudMount di Windows 11 File Explorer" width="950">
+</p>
+
 ---
 
 🌐 **Language / Bahasa:** [English](README.md) • [Bahasa Indonesia](README.id.md)
