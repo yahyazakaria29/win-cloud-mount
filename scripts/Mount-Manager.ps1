@@ -147,11 +147,14 @@ function Start-DriveMount {
     $volName        = if ($DriveConfig.volume_name) { $DriveConfig.volume_name } else { "CloudDrive - $driveLet" }
     $logFile        = Join-Path $LogDir "$($DriveConfig.name)_mount.log"
 
+    $rcloneCmd = Get-Command rclone -ErrorAction SilentlyContinue
+    $rcloneExe = if ($rcloneCmd) { $rcloneCmd.Source } else { "rclone.exe" }
+
     $args = @(
         "mount",
         $DriveConfig.remote,
         $driveLet,
-        "--volname=$volName",
+        "--volname=`"$volName`"",
         "--vfs-cache-mode=full",
         "--vfs-cache-max-size=$cacheSize",
         "--vfs-cache-max-age=24h",
@@ -174,10 +177,10 @@ function Start-DriveMount {
     Write-Host "-> Launching mount: $($DriveConfig.remote) => $driveLet [$volName]" -ForegroundColor Cyan
     Write-Host "   Cache: $cacheDir (Cap: $cacheSize) | Buffer: $bufferSize" -ForegroundColor Gray
 
-    $proc = Start-Process -FilePath "rclone" -ArgumentList $args -WindowStyle Hidden -PassThru
+    $proc = Start-Process -FilePath $rcloneExe -ArgumentList $args -WindowStyle Hidden -PassThru
 
     # Wait briefly and verify mount health
-    Start-Sleep -Seconds 2
+    Start-Sleep -Seconds 3
     $checkDrive = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
     if ($checkDrive -or (-not $proc.HasExited)) {
         Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id))" -ForegroundColor Green
