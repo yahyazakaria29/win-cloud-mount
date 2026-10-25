@@ -103,11 +103,11 @@ Once remotes are configured, append them to `config/drives.json`:
     "cache_size": "20G"
   },
   {
-    "name": "onedrive-office",
-    "remote": "onedrive_work:",
+    "name": "onedrive-campus",
+    "remote": "onedrive_campus:",
     "drive_letter": "F:",
-    "volume_name": "OneDrive - Office",
-    "cache_dir": ".cache/onedrive_work",
+    "volume_name": "OneDrive - Campus",
+    "cache_dir": ".cache/onedrive_campus",
     "cache_size": "15G"
   }
 ]

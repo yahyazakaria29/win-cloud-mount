@@ -92,11 +92,11 @@ Edit `config/drives.json` to assign your cloud remotes to drive letters:
     "cache_size": "20G"
   },
   {
-    "name": "gdrive-work",
-    "remote": "gdrive_work:",
+    "name": "onedrive-campus",
+    "remote": "onedrive_campus:",
     "drive_letter": "F:",
-    "volume_name": "GoogleDrive - Work",
-    "cache_dir": ".cache/gdrive_work",
+    "volume_name": "OneDrive - Campus",
+    "cache_dir": ".cache/onedrive_campus",
     "cache_size": "15G"
   }
 ]

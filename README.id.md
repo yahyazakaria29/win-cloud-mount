@@ -67,11 +67,11 @@ Sesuaikan remote dan huruf drive yang Anda inginkan (`config/drives.json`):
     "icon": "assets/icons/googledrive.ico"
   },
   {
-    "name": "onedrive-kantor",
-    "remote": "onedrive_kantor:",
+    "name": "onedrive-kampus",
+    "remote": "onedrive_kampus:",
     "drive_letter": "F:",
-    "volume_name": "OneDrive - Kantor B2B",
-    "cache_dir": ".cache/onedrive_kantor",
+    "volume_name": "OneDrive - Kampus",
+    "cache_dir": ".cache/onedrive_kampus",
     "cache_size": "15G",
     "icon": "assets/icons/onedrive.ico"
   }

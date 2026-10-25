@@ -13,11 +13,11 @@
     "icon": "assets/icons/googledrive.ico"
   },
   {
-    "name": "gdrive-work",
-    "remote": "gdrive_work:",
+    "name": "gdrive-campus",
+    "remote": "gdrive_campus:",
     "drive_letter": "F:",
-    "volume_name": "GoogleDrive - Work",
-    "cache_dir": ".cache/gdrive_work",
+    "volume_name": "GoogleDrive - Campus",
+    "cache_dir": ".cache/gdrive_campus",
     "cache_size": "15G",
     "buffer_size": "16M",
     "read_chunk_size": "16M",
