@@ -151,7 +151,8 @@ function Wait-ForNetworkConnection {
 function Set-DriveIcon {
     param (
         [string]$DriveLetter,
-        [string]$IconPath
+        [string]$IconPath,
+        [string]$VolumeLabel
     )
     if (-not $IconPath) {
         $candidate = Join-Path $ProjectRoot "assets\icons\googledrive.ico"
@@ -159,12 +160,43 @@ function Set-DriveIcon {
     }
     if ($IconPath -and (Test-Path $IconPath)) {
         $letterOnly = $DriveLetter.ToUpper().TrimEnd(':')
-        $regKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\$letterOnly\DefaultIcon"
+
+        # Method 1: Current User Classes (Primary location evaluated by Windows 11 Explorer for per-user drive icons)
+        $classesKey = "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\$letterOnly\DefaultIcon"
         try {
-            if (-not (Test-Path $regKey)) {
-                New-Item -Path $regKey -Force | Out-Null
+            if (-not (Test-Path $classesKey)) { New-Item -Path $classesKey -Force | Out-Null }
+            Set-ItemProperty -Path $classesKey -Name "(Default)" -Value $IconPath -Force
+        } catch {}
+
+        if ($VolumeLabel) {
+            $labelKey = "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\$letterOnly\DefaultLabel"
+            try {
+                if (-not (Test-Path $labelKey)) { New-Item -Path $labelKey -Force | Out-Null }
+                Set-ItemProperty -Path $labelKey -Name "(Default)" -Value $VolumeLabel -Force
+            } catch {}
+        }
+
+        # Method 2: Explorer DriveIcons (Legacy fallback)
+        $explorerKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\$letterOnly\DefaultIcon"
+        try {
+            if (-not (Test-Path $explorerKey)) { New-Item -Path $explorerKey -Force | Out-Null }
+            Set-ItemProperty -Path $explorerKey -Name "(Default)" -Value $IconPath -Force
+        } catch {}
+
+        # Broadcast Shell change notification
+        try {
+            $code = @"
+using System;
+using System.Runtime.InteropServices;
+public class ShellNotifier {
+    [DllImport("shell32.dll")]
+    public static extern void SHChangeNotify(int wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
+}
+"@
+            if (-not ([System.Management.Automation.PSTypeName]'ShellNotifier').Type) {
+                Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
             }
-            Set-ItemProperty -Path $regKey -Name "(Default)" -Value $IconPath -Force
+            [ShellNotifier]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
         } catch {}
     }
 }
@@ -249,7 +281,7 @@ function Start-DriveMount {
 
     # Wait briefly and verify mount health
     Start-Sleep -Seconds 3
-    Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon
+    Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon -VolumeLabel $volName
     $checkDrive = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
     if ($checkDrive -or (-not $proc.HasExited)) {
         Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id))" -ForegroundColor Green
