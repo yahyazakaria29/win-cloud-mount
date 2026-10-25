@@ -1,0 +1,41 @@
+[
+  {
+    "name": "gdrive-personal",
+    "remote": "gdrive_personal:",
+    "drive_letter": "E:",
+    "volume_name": "GoogleDrive - Personal",
+    "cache_dir": ".cache/gdrive_personal",
+    "cache_size": "20G",
+    "buffer_size": "16M",
+    "read_chunk_size": "16M",
+    "read_chunk_limit": "256M",
+    "read_only": false,
+    "icon": "assets/icons/googledrive.ico"
+  },
+  {
+    "name": "gdrive-campus",
+    "remote": "gdrive_campus:",
+    "drive_letter": "F:",
+    "volume_name": "GoogleDrive - Campus",
+    "cache_dir": ".cache/gdrive_campus",
+    "cache_size": "15G",
+    "buffer_size": "16M",
+    "read_chunk_size": "16M",
+    "read_chunk_limit": "256M",
+    "read_only": false,
+    "icon": "assets/icons/googledrive.ico"
+  },
+  {
+    "name": "onedrive-office",
+    "remote": "onedrive_work:",
+    "drive_letter": "G:",
+    "volume_name": "OneDrive - Corporate",
+    "cache_dir": ".cache/onedrive_work",
+    "cache_size": "15G",
+    "buffer_size": "16M",
+    "read_chunk_size": "16M",
+    "read_chunk_limit": "256M",
+    "read_only": false,
+    "icon": "assets/icons/onedrive.ico"
+  }
+]
