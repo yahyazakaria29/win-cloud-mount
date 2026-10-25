@@ -145,6 +145,23 @@ WinCloudMount applies fine-tuned VFS parameters out of the box:
 
 ---
 
+## 🗑️ Uninstallation & Teardown
+
+To cleanly remove WinCloudMount, stop background daemons, remove Task Scheduler autostart, and revert Windows Explorer customizations:
+
+```powershell
+# Standard unmount, remove autostart task, and clean registry drive branding
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1
+
+# Optional: also purge local VFS cache files on drive D:
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
+
+# Full wipe: unmount + remove autostart + purge cache + uninstall WinFsp & Rclone via Winget
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache -RemovePrerequisites
+```
+
+---
+
 ## 🛡️ Security & Privacy
 
 * **Zero Cloud Intermediaries:** Credentials, OAuth tokens, and encryption keys remain exclusively on your local machine in `%APPDATA%\rclone\rclone.conf`.
