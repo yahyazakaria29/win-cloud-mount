@@ -1,0 +1,40 @@
+# WinCloudMount .gitignore
+# Strict protection for user credentials, tokens, local configurations, and cache
+
+# Configuration files containing personal remote names / drive mappings
+config/drives.json
+
+# Rclone sensitive files
+rclone.conf
+*.conf
+*.token
+*.key
+*.secret
+
+# Cache directories (never commit local disk cache)
+cache/
+*/cache/
+.cache/
+
+# Runtime logs
+logs/
+*.log
+
+# Windows temporary & system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# PowerShell temporary files
+*.ps1~
+*.psd1~
+*.psm1~
+
+# Visual Studio Code & JetBrains
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
