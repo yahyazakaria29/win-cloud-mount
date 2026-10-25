@@ -131,7 +131,24 @@ WinCloudMount applies fine-tuned VFS parameters out of the box:
 * `--vfs-cache-mode full`: Mandatory for Windows Explorer. Enables sparse file emulation so Microsoft Office lock files and video editors can read/write without `0x80070032` errors.
 * `--buffer-size 16M`: Keeps RAM consumption bounded at ~25MB per drive (unlike unconstrained tools that eat 400MB+).
 * `--vfs-read-chunk-size 16M --vfs-read-chunk-size-limit 256M`: Streams files on-demand in small progressive chunks. Video playback begins in milliseconds without downloading entire gigabyte-sized files.
-* `--cache-dir D:/...`: Safely redirects disk cache away from partition `C:`, preventing system drive exhaustion.
+* `--cache-dir .cache/...`: Safely confines disk cache inside the project directory (or secondary partition), preventing system drive `C:` exhaustion.
+
+---
+
+## 🎨 Supported Cloud Providers & Home Server NAS
+
+WinCloudMount natively supports 40+ backends and includes official high-resolution Windows `.ico` assets with **Smart Auto-Detection**:
+* **Google Drive / Google Workspace** (`assets/icons/googledrive.ico`)
+* **Microsoft OneDrive / SharePoint** (`assets/icons/onedrive.ico`)
+* **Dropbox** (`assets/icons/dropbox.ico`)
+* **Nextcloud / ownCloud** (`assets/icons/nextcloud.ico`)
+* **Box.com** (`assets/icons/box.ico`)
+* **MEGA Cloud** (`assets/icons/mega.ico`)
+* **Proton Drive** (`assets/icons/protondrive.ico`)
+* **Amazon S3 / Cloudflare R2 / Backblaze B2 / Wasabi / MinIO** (`assets/icons/s3.ico`)
+* **Home Server / Homelab / NAS**: TrueNAS, Synology, QNAP, Linux servers via **SFTP/SSH**, **SMB/Samba**, **WebDAV**, or **MinIO S3**.
+
+See [docs/PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md) for step-by-step connection guides for every provider.
 
 ---
 
@@ -157,7 +174,7 @@ To cleanly remove WinCloudMount, stop background daemons, remove Task Scheduler 
 # Standard unmount, remove autostart task, and clean registry drive branding
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1
 
-# Optional: also purge local VFS cache files on drive D:
+# Optional: also purge local VFS cache files
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 
 # Full wipe: unmount + remove autostart + purge cache + uninstall WinFsp & Rclone via Winget

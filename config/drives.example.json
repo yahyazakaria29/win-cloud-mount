@@ -26,16 +26,16 @@
     "icon": "assets/icons/googledrive.ico"
   },
   {
-    "name": "onedrive-office",
-    "remote": "onedrive_work:",
-    "drive_letter": "G:",
-    "volume_name": "OneDrive - Corporate",
-    "cache_dir": ".cache/onedrive_work",
-    "cache_size": "15G",
+    "name": "home-nas",
+    "remote": "home_nas:/mnt/storage",
+    "drive_letter": "Z:",
+    "volume_name": "Home Server NAS",
+    "cache_dir": ".cache/home_nas",
+    "cache_size": "25G",
     "buffer_size": "16M",
     "read_chunk_size": "16M",
     "read_chunk_limit": "256M",
     "read_only": false,
-    "icon": "assets/icons/onedrive.ico"
+    "icon": "assets/icons/nextcloud.ico"
   }
 ]

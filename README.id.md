@@ -106,6 +106,9 @@ WinCloudMount menyertakan bundel file `.ico` resmi multi-resolusi (16x16 hingga 
 * **MEGA Cloud** (`assets/icons/mega.ico`)
 * **Proton Drive** (`assets/icons/protondrive.ico`)
 * **Amazon S3 / Wasabi / Backblaze B2 / R2** (`assets/icons/s3.ico`)
+* **Home Server & NAS**: TrueNAS, Synology, QNAP, Linux File Server via **SFTP/SSH**, **SMB/Samba**, **WebDAV**, atau **MinIO S3**.
+
+*Panduan lengkap langkah demi langkah untuk setiap cloud dan Home Server dapat dilihat di [docs/PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md).*
 
 *Jika Anda mengosongkan parameter `"icon"`, sistem akan otomatis mendeteksi nama provider dan memasang logo yang tepat.*
 

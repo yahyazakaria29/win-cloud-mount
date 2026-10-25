@@ -59,7 +59,32 @@ WinCloudMount uses standard Rclone remotes configured in `%APPDATA%\rclone\rclon
 
 ---
 
-## 5. Official Drive Icons & Custom Branding
+## 5. Home Server & Local NAS (SFTP / SSH, SMB / Samba, WebDAV)
+
+WinCloudMount is fully compatible with home labs, TrueNAS, Synology, QNAP, and Linux file servers.
+
+### SFTP / SSH (Linux Server / Homelab)
+1. Run `rclone config` -> `n` (New remote).
+2. Name: `home_nas`.
+3. Storage type: `sftp`.
+4. Host: LAN IP (e.g., `192.168.1.50`) or Tailscale/WireGuard IP.
+5. User: your Linux username.
+6. Port: `22` (or custom port).
+7. Password or SSH Private Key path.
+
+### SMB / Samba (Windows Share / TrueNAS / Synology)
+1. Run `rclone config` -> `n` (New remote).
+2. Name: `smb_nas`.
+3. Storage type: `smb`.
+4. Host: LAN hostname or IP (e.g. `192.168.1.100`).
+5. User & Password: domain/local user credentials.
+
+### Self-Hosted Object Storage (MinIO / Ceph / Garage)
+Follow the **Amazon S3** section above using provider `Minio` and your local endpoint URL (e.g., `http://192.168.1.50:9000`).
+
+---
+
+## 6. Official Drive Icons & Custom Branding
 
 WinCloudMount includes bundled high-resolution multi-size Windows `.ico` assets in `assets/icons/`:
 - `googledrive.ico` - Google Drive & Google Workspace
@@ -88,7 +113,7 @@ You can also explicitly specify an icon in `config/drives.json`:
 
 ---
 
-## 6. Integrating with WinCloudMount
+## 7. Integrating with WinCloudMount
 
 Once remotes are configured, append them to `config/drives.json`:
 
