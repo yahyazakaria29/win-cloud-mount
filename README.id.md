@@ -1,20 +1,28 @@
+<div align="center">
+
 # WinCloudMount 🚀
 
-> **Orkestrator Virtual Cloud Drive Performa Tinggi & Hemat RAM untuk Windows.**  
-> *Mount akun Google Drive, OneDrive, Nextcloud, Mega, Dropbox, dan S3 tanpa batas sebagai drive lokal Windows (`E:`, `F:`, `G:`, dst.) dengan fitur drag-and-drop penuh, cache VFS super cepat, icon resmi provider, dan tanpa aplikasi latar belakang yang berat.*
+### *Orkestrator Virtual Cloud Drive Performa Tinggi & Hemat RAM untuk Windows.*
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(64--bit)-0078D6?logo=windows)](https://microsoft.com/windows)
-[![Engine](https://img.shields.io/badge/Engine-WinFsp%20%2B%20Rclone-success)](https://winfsp.dev)
-[![Memory Footprint](https://img.shields.io/badge/RAM%20per%20drive-~25MB-brightgreen)](docs/BENCHMARKS.md)
+Mount akun Google Drive, OneDrive, Nextcloud, Mega, Dropbox, dan S3 tanpa batas sebagai drive lokal Windows (`E:`, `F:`, `G:`, dst.) dengan fitur drag-and-drop penuh, cache VFS super cepat, icon resmi provider, dan tanpa aplikasi latar belakang yang berat.
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://microsoft.com/windows"><img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(64--bit)-0078D6?logo=windows" alt="Platform"></a>
+  <a href="https://winfsp.dev"><img src="https://img.shields.io/badge/Engine-WinFsp%20%2B%20Rclone-success" alt="Engine"></a>
+  <a href="docs/BENCHMARKS.md"><img src="https://img.shields.io/badge/RAM%20per%20drive-~25MB-brightgreen" alt="Memory Footprint"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+</p>
 
 ---
 
-🌐 **Language / Bahasa:** [English](README.md) | [Bahasa Indonesia](README.id.md)
+🌐 **Language / Bahasa:** [English](README.md) • [Bahasa Indonesia](README.id.md)
 
 [ 🚀 Panduan Cepat ](#-panduan-cepat-kurang-dari-5-menit) • [ 🎨 Provider & NAS yang Didukung ](#-bundel-icon-resmi--auto-detection) • [ 📊 Perbandingan Performa ](#-mengapa-wincloudmount-dibanding-aplikasi-komersial) • [ 🗑️ Panduan Uninstall ](#️-prosedur-uninstall-pembersihan-tuntas)
 
 ---
+
+</div>
 
 ## ⚡ Mengapa WinCloudMount Dibanding Aplikasi Komersial?
 

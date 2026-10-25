@@ -1,21 +1,28 @@
+<div align="center">
+
 # WinCloudMount 🚀
 
-> **High-Performance, Ultra-Lightweight Multi-Cloud Virtual Drive Orchestrator for Windows.**  
-> Seamlessly mount unlimited cloud storage accounts (Google Drive, OneDrive, Nextcloud, Mega, S3) as native Windows drives (`E:`, `F:`, `G:`, etc.) with full drag-and-drop, high-speed VFS caching, and zero background UI bloat.
+### *High-Performance, Ultra-Lightweight Multi-Cloud Virtual Drive Orchestrator for Windows.*
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(64--bit)-0078D6?logo=windows)](https://microsoft.com/windows)
-[![Engine](https://img.shields.io/badge/Engine-WinFsp%20%2B%20Rclone-success)](https://winfsp.dev)
-[![Memory Footprint](https://img.shields.io/badge/RAM%20per%20drive-~25MB-brightgreen)](docs/BENCHMARKS.md)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+Seamlessly mount unlimited cloud storage accounts (Google Drive, OneDrive, Nextcloud, Mega, S3) as native Windows drives (`E:`, `F:`, `G:`, etc.) with full drag-and-drop, high-speed VFS caching, and zero background UI bloat.
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://microsoft.com/windows"><img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(64--bit)-0078D6?logo=windows" alt="Platform"></a>
+  <a href="https://winfsp.dev"><img src="https://img.shields.io/badge/Engine-WinFsp%20%2B%20Rclone-success" alt="Engine"></a>
+  <a href="docs/BENCHMARKS.md"><img src="https://img.shields.io/badge/RAM%20per%20drive-~25MB-brightgreen" alt="Memory Footprint"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+</p>
 
 ---
 
-🌐 **Language / Bahasa:** [English](README.md) | [Bahasa Indonesia](README.id.md)
+🌐 **Language / Bahasa:** [English](README.md) • [Bahasa Indonesia](README.id.md)
 
 [ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 🛠️ Architecture ](#️-architecture) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
 
 ---
+
+</div>
 
 ## ⚡ Why WinCloudMount Over Commercial Alternatives?
 
