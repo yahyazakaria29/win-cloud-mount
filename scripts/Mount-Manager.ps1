@@ -66,10 +66,29 @@ function Write-MountHeader {
     Write-Host "`n=== WinCloudMount: $Title ===" -ForegroundColor Cyan
 }
 
-function Test-Prerequisites {
+function Ensure-RcloneInPath {
     $rclone = Get-Command rclone -ErrorAction SilentlyContinue
-    if (-not $rclone) {
-        Write-Error "Rclone executable not found in PATH. Run .\scripts\Install-Prerequisites.ps1 first."
+    if ($rclone) { return $true }
+
+    # Attempt to reload PATH from registry (in case rclone was installed while terminal was open)
+    $env:PATH = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $rclone = Get-Command rclone -ErrorAction SilentlyContinue
+    if ($rclone) { return $true }
+
+    # Check Winget default installation directory
+    $wingetRclone = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Filter "rclone.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($wingetRclone) {
+        $binDir = Split-Path -Parent $wingetRclone.FullName
+        $env:PATH = "$binDir;$env:PATH"
+        return $true
+    }
+
+    return $false
+}
+
+function Test-Prerequisites {
+    if (-not (Ensure-RcloneInPath)) {
+        Write-Error "Rclone executable not found in PATH. Run .\scripts\Install-Prerequisites.ps1 first or restart your terminal."
         return $false
     }
 
