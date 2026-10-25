@@ -258,16 +258,16 @@ function Show-Status {
     }
 
     Write-Host "Windows File Explorer Drives:" -ForegroundColor White
-    $drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $null -ne $_.DisplayRoot -or $_.Name -notin @('C','D') }
+    $drives = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name -notmatch "^[CD]:\\" }
     if ($drives) {
         $driveDetails = foreach ($d in $drives) {
-            $usedGB = if ($d.Used) { [math]::Round($d.Used / 1GB, 2) } else { 0 }
-            $freeGB = if ($d.Free) { [math]::Round($d.Free / 1GB, 2) } else { 0 }
-            $totalGB = [math]::Round($usedGB + $freeGB, 2)
+            $freeGB  = [math]::Round($d.TotalFreeSpace / 1GB, 2)
+            $totalGB = [math]::Round($d.TotalSize / 1GB, 2)
+            $usedGB  = [math]::Round($totalGB - $freeGB, 2)
 
             [PSCustomObject]@{
-                Drive = "$($d.Name):"
-                Root  = $d.Root
+                Drive        = $d.Name.TrimEnd('\')
+                Label        = $d.VolumeLabel
                 "Used (GB)"  = $usedGB
                 "Free (GB)"  = $freeGB
                 "Total (GB)" = $totalGB
