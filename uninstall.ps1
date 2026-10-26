@@ -78,12 +78,12 @@
     if (Test-Path $localMountMgr) {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $localMountMgr -Action stop
     } else {
-        Get-Process -Name 'rclone' -ErrorAction SilentlyContinue | Where-Object {
-            try {
-                (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine -match 'mount'
-            } catch { $false }
-        } | Stop-Process -Force -ErrorAction SilentlyContinue
-        Write-Ok 'All rclone mount processes stopped.'
+        $installDirEsc = [regex]::Escape($InstallDir)
+        Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" -ErrorAction SilentlyContinue | Where-Object {
+            $cmd = $_.CommandLine
+            $cmd -and ($cmd -match "\bmount\b") -and (($cmd -match $installDirEsc) -or ($cmd -match "WinCloudMount"))
+        } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+        Write-Ok 'WinCloudMount rclone processes stopped.'
     }
 
     # 4. Remove Task Scheduler autostart
@@ -129,10 +129,13 @@
         }
     }
 
-    # Clean stale network mount points
+    # Clean stale network mount points for rclone and uninstalled drives
     try {
         Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2' -ErrorAction SilentlyContinue |
-            Where-Object { $_.PSChildName -like '*server*' -or $_.PSChildName -like '*rclone*' } |
+            Where-Object {
+                $child = $_.PSChildName
+                ($child -like '*rclone*') -or ($letters -contains $child)
+            } |
             ForEach-Object { Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue }
     } catch { }
 

@@ -33,6 +33,11 @@
         "pattern": "^[0-9]+[MGTPmgtp]$",
         "description": "Maximum size cap for the local disk cache (e.g. '20G')."
       },
+      "cache_min_free_space": {
+        "type": "string",
+        "pattern": "^[0-9]+[MGTPmgtp]$",
+        "description": "Target minimum free space to keep on the cache drive (e.g. '10G'). Rclone will prioritize evicting cached files when free space drops below this."
+      },
       "buffer_size": {
         "type": "string",
         "pattern": "^[0-9]+[MGTPmgtp]$",

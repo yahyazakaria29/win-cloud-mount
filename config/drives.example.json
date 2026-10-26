@@ -6,6 +6,7 @@
     "volume_name": "GoogleDrive - Personal",
     "cache_dir": ".cache/gdrive_personal",
     "cache_size": "20G",
+    "cache_min_free_space": "10G",
     "buffer_size": "16M",
     "read_chunk_size": "16M",
     "read_chunk_limit": "256M",

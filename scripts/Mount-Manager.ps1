@@ -117,13 +117,38 @@ function Load-DriveConfig {
 }
 
 function Clear-StaleNetworkMountPoints {
+    param (
+        [string[]]$TargetLetters = @()
+    )
     # Cleans up orphaned Windows Shell network mount point entries that cause disconnected drive icons (red X)
     try {
-        Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2" -ErrorAction SilentlyContinue |
-            Where-Object { $_.PSChildName -like "*server*" -or $_.PSChildName -like "*rclone*" } |
-            ForEach-Object {
+        $mountPointsKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2"
+        if (-not (Test-Path $mountPointsKey)) { return }
+
+        Get-ChildItem $mountPointsKey -ErrorAction SilentlyContinue | ForEach-Object {
+            $childName = $_.PSChildName
+            $shouldRemove = $false
+
+            # Target rclone specific mount point keys
+            if ($childName -like "*rclone*") {
+                $shouldRemove = $true
+            }
+
+            # Target only explicitly managed drive letter keys if provided
+            if ($TargetLetters -and $TargetLetters.Count -gt 0) {
+                foreach ($tl in $TargetLetters) {
+                    $cleanLetter = $tl.ToUpper().TrimEnd(':')
+                    if ($childName -eq $cleanLetter) {
+                        $shouldRemove = $true
+                        break
+                    }
+                }
+            }
+
+            if ($shouldRemove) {
                 Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
             }
+        }
     } catch {}
 }
 
@@ -261,11 +286,11 @@ public class ShellNotifier {
 function Start-DriveMount {
     param ($DriveConfig)
 
-    Clear-StaleNetworkMountPoints
-
     $driveLet = $DriveConfig.drive_letter.ToUpper()
     if (-not $driveLet.EndsWith(":")) { $driveLet = "$driveLet`:" }
     $letterOnly = $driveLet.TrimEnd(':')
+
+    Clear-StaleNetworkMountPoints -TargetLetters @($letterOnly)
 
     # Check if drive letter is currently taken
     $existing = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
@@ -285,8 +310,22 @@ function Start-DriveMount {
         New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
     }
 
+    # Preflight Disk Space Check for VFS Cache
+    try {
+        $resolvedCacheDir = if ([System.IO.Path]::IsPathRooted($cacheDir)) { $cacheDir } else { Join-Path $ProjectRoot $cacheDir }
+        $cacheDriveRoot = [System.IO.Path]::GetPathRoot($resolvedCacheDir)
+        if ($cacheDriveRoot) {
+            $driveObj = [System.IO.DriveInfo]::new($cacheDriveRoot)
+            $availGB = [math]::Round($driveObj.AvailableFreeSpace / 1GB, 2)
+            if ($availGB -lt 5.0) {
+                Write-Warning "Host disk ($cacheDriveRoot) has only $availGB GB free space remaining! Ensure sufficient space for local VFS caching."
+            }
+        }
+    } catch {}
+
     # Defaults for resource-efficient tuning
     $cacheSize      = if ($DriveConfig.cache_size) { $DriveConfig.cache_size } else { "20G" }
+    $cacheMinFree   = if ($DriveConfig.cache_min_free_space) { $DriveConfig.cache_min_free_space } else { "10G" }
     $bufferSize     = if ($DriveConfig.buffer_size) { $DriveConfig.buffer_size } else { "16M" }
     $readChunkSize  = if ($DriveConfig.read_chunk_size) { $DriveConfig.read_chunk_size } else { "16M" }
     $readChunkLimit = if ($DriveConfig.read_chunk_limit) { $DriveConfig.read_chunk_limit } else { "256M" }
@@ -305,6 +344,7 @@ function Start-DriveMount {
         "--volname `"$volName`"",
         "--vfs-cache-mode full",
         "--vfs-cache-max-size $cacheSize",
+        "--vfs-cache-min-free-space $cacheMinFree",
         "--vfs-cache-max-age 24h",
         "--vfs-cache-poll-interval 1m",
         "--cache-dir `"$cacheDir`"",
@@ -320,6 +360,7 @@ function Start-DriveMount {
         "--drive-pacer-burst 200",
         "--links",
         "--no-modtime",
+        "--user-agent `"WinCloudMount/1.0.0 (Windows)`"",
         "--log-file `"$logFile`"",
         "--log-level NOTICE"
     )
@@ -336,7 +377,7 @@ function Start-DriveMount {
     $argString = $argList -join " "
 
     Write-Host "-> Launching mount: $($DriveConfig.remote) => $driveLet [$volName]" -ForegroundColor Cyan
-    Write-Host "   Cache: $cacheDir (Cap: $cacheSize) | Buffer: $bufferSize" -ForegroundColor Gray
+    Write-Host "   Cache: $cacheDir (Cap: $cacheSize, MinFree: $cacheMinFree) | Buffer: $bufferSize" -ForegroundColor Gray
 
     # Retry loop (up to 3 total attempts) to handle post-boot DNS/network settling
     $maxAttempts = 3
@@ -364,22 +405,39 @@ function Start-DriveMount {
 function Stop-DriveMount {
     param ([string]$TargetDrive)
 
-    $procs = Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" | Where-Object {
-        $_.CommandLine -match "mount"
-    }
-
-    if (-not $procs) {
+    $allProcs = Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" -ErrorAction SilentlyContinue
+    if (-not $allProcs) {
         Write-Host "No active rclone mounts detected." -ForegroundColor Yellow
         return
     }
 
-    foreach ($p in $procs) {
+    $projectRootEsc = [regex]::Escape($ProjectRoot)
+    $wcmProcs = @($allProcs | Where-Object {
+        $cmd = $_.CommandLine
+        if (-not $cmd -or ($cmd -notmatch "\bmount\b")) { return $false }
+        # Match only processes belonging to WinCloudMount (by project root path, cache-dir/log-file, or user-agent)
+        ($cmd -match $projectRootEsc) -or ($cmd -match "WinCloudMount")
+    })
+
+    if (-not $wcmProcs -or $wcmProcs.Count -eq 0) {
+        Write-Host "No active WinCloudMount rclone processes detected." -ForegroundColor Yellow
+        return
+    }
+
+    $stoppedLetters = @()
+
+    foreach ($p in $wcmProcs) {
         $cmdLine = $p.CommandLine
         $matched = $false
+        $driveInCmd = $null
+
+        if ($cmdLine -match "mount\s+\S+\s+([A-Za-z]:)") {
+            $driveInCmd = $Matches[1].ToUpper()
+        }
 
         if ($TargetDrive) {
             $normalizedTarget = $TargetDrive.ToUpper().TrimEnd(':') + ":"
-            if ($cmdLine -match [regex]::Escape($normalizedTarget)) {
+            if ($driveInCmd -eq $normalizedTarget -or ($cmdLine -match [regex]::Escape($normalizedTarget))) {
                 $matched = $true
             }
         } else {
@@ -387,17 +445,41 @@ function Stop-DriveMount {
         }
 
         if ($matched) {
-            Write-Host "Stopping rclone mount PID: $($p.ProcessId)..." -ForegroundColor Yellow
+            # Check for un-uploaded / dirty files in VFS cache before stopping
+            if ($cmdLine -match '--cache-dir\s+"?([^"]+)"?') {
+                $targetCacheDir = $Matches[1].Trim()
+                $vfsMetaDir = Join-Path $targetCacheDir "vfsMeta"
+                if (Test-Path $vfsMetaDir) {
+                    try {
+                        $dirtyMeta = Get-ChildItem -Path $vfsMetaDir -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
+                            (Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue) -match '"Dirty"\s*:\s*true'
+                        }
+                        if ($dirtyMeta -and $dirtyMeta.Count -gt 0) {
+                            $driveLabel = if ($driveInCmd) { $driveInCmd } else { "PID $($p.ProcessId)" }
+                            Write-Warning "Drive $driveLabel has $($dirtyMeta.Count) file(s) currently being uploaded to the cloud in VFS cache."
+                            Write-Host "   Allowing 3 seconds grace period before terminating (any remaining files will resume uploading on next mount)..." -ForegroundColor Yellow
+                            Start-Sleep -Seconds 3
+                        }
+                    } catch {}
+                }
+            }
+
+            Write-Host "Stopping rclone mount PID: $($p.ProcessId) $(if ($driveInCmd) { "[$driveInCmd]" })..." -ForegroundColor Yellow
             try {
                 Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop
                 Write-Host "[OK] Stopped mount process $($p.ProcessId)." -ForegroundColor Green
+                if ($driveInCmd) { $stoppedLetters += $driveInCmd }
             } catch {
                 Write-Warning "Could not stop PID $($p.ProcessId): $_"
             }
         }
     }
 
-    Clear-StaleNetworkMountPoints
+    if ($stoppedLetters.Count -gt 0) {
+        Clear-StaleNetworkMountPoints -TargetLetters $stoppedLetters
+    } else {
+        Clear-StaleNetworkMountPoints
+    }
 }
 
 function Show-Status {
@@ -409,19 +491,20 @@ function Show-Status {
     } else {
         Write-Host "`nRunning Rclone Processes:" -ForegroundColor White
         $procDetails = foreach ($p in $procs) {
-            $cim = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)"
-            $cmd = $cim.CommandLine
+            $cim = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)" -ErrorAction SilentlyContinue
+            $cmd = if ($cim) { $cim.CommandLine } else { "" }
             $mountTarget = "Unknown"
             if ($cmd -match "mount\s+(\S+)\s+([A-Za-z]:)") {
                 $mountTarget = "$($Matches[1]) -> $($Matches[2])"
             }
 
             [PSCustomObject]@{
-                PID       = $p.Id
-                Mount     = $mountTarget
-                "RAM (MB)"= [math]::Round($p.WorkingSet64 / 1MB, 2)
-                "CPU (s)" = [math]::Round($p.CPU, 2)
-                StartTime = $p.StartTime.ToString("HH:mm:ss")
+                PID            = $p.Id
+                Mount          = $mountTarget
+                "RAM WS (MB)"  = [math]::Round($p.WorkingSet64 / 1MB, 2)
+                "Private (MB)" = [math]::Round($p.PrivateMemorySize64 / 1MB, 2)
+                "CPU (s)"      = [math]::Round($p.CPU, 2)
+                StartTime      = $p.StartTime.ToString("HH:mm:ss")
             }
         }
         $procDetails | Format-Table -AutoSize

@@ -17,7 +17,7 @@ Mount akun Google Drive, OneDrive, Nextcloud, Mega, Dropbox, dan S3 tanpa batas 
 
 🌐 [English](README.md) • [Bahasa Indonesia](README.id.md)
 
-[ 🚀 Panduan Cepat ](#-panduan-cepat-kurang-dari-5-menit) • [ 🎨 Provider & NAS yang Didukung ](#-bundel-icon-resmi--auto-detection) • [ 📊 Perbandingan Performa ](#-mengapa-wincloudmount-dibanding-aplikasi-komersial) • [ ☕ Dukungan ](#-dukungan--traktir-kopi) • [ 🗑️ Panduan Uninstall ](#️-prosedur-uninstall-pembersihan-tuntas)
+[ 🚀 Panduan Cepat ](#-panduan-cepat-kurang-dari-5-menit) • [ 🎨 Provider & NAS ](#-bundel-icon-resmi--auto-detection) • [ 📊 Benchmark ](docs/BENCHMARKS.md) • [ 💾 Panduan Backup ](docs/BACKUP-RECOVERY.md) • [ 🔒 Kebijakan Keamanan ](SECURITY.md) • [ ☕ Dukungan ](#-dukungan--traktir-kopi) • [ 🗑️ Uninstall ](#️-prosedur-uninstall-pembersihan-tuntas)
 
 ---
 
@@ -35,9 +35,9 @@ Software komersial seperti **Air Live Drive** atau **RaiDrive** membatasi fitur 
 
 | Fitur / Metrik | Air Live Drive (Free) | RaiDrive (Standard) | **WinCloudMount** |
 | :--- | :--- | :--- | :--- |
-| **Batas Drive Simultan** | **1 Drive (Terkunci Lisensi)** | 4-8 Drives | **Unlimited (Bebas Tanpa Batas)** |
-| **Konsumsi RAM saat Idle** | ~250 MB – 400 MB | ~180 MB – 300 MB | **~25 MB – 35 MB per drive** |
-| **Penggunaan CPU saat Idle** | 0.8% – 2.5% | 0.5% – 1.8% | **0.0% (Event Proxy Native WinFsp)** |
+| **Batas Drive Simultan** | **1 Drive (Terkunci Lisensi)** | 4-8 Drives | **Tanpa batas software (hingga seluruh huruf drive Windows)** |
+| **Konsumsi RAM saat Idle** | ~250 MB – 400 MB | ~180 MB – 300 MB | **~25 MB – 35 MB working set per drive (~60–75 MB private bytes)** |
+| **Penggunaan CPU saat Idle** | 0.8% – 2.5% | 0.5% – 1.8% | **< 0.1% idle (Kernel event proxy WinFsp, tanpa polling UI)** |
 | **Dukungan Provider Cloud** | ~15 Provider | ~18 Provider | **40+ Provider (via Rclone)** |
 | **Lokasi Cache VFS** | Drive Sistem `C:\` | Dasar | **Terisolasi di `.cache/` (Bebas Partisi)** |
 | **Branding Drive** | Icon Generik / Network Share | Khusus | **Fixed Disk Lokal + Icon Resmi Provider** |
@@ -191,9 +191,12 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 ---
 
 ## 🛡️ Keamanan & Privasi
-* **Tanpa Perantara Cloud**: Token OAuth dan enkripsi tersimpan lokal di `%APPDATA%\rclone\rclone.conf` pada laptop Anda sendiri.
+* **Tanpa Perantara Cloud**: Token OAuth dan enkripsi tersimpan lokal di `%APPDATA%
+clone
+clone.conf` pada laptop Anda sendiri.
 * **Aman dari Kebocoran Git**: File `drives.json`, cache VFS, dan kredensial otomatis diabaikan oleh `.gitignore`.
-* **Tanpa Hak Akses Administrator**: Skrip berjalan normal pada level user biasa.
+* **Isolasi Proses & Registry**: Pengelolaan proses dan registri Windows Explorer dibatasi hanya untuk drive terkelola WinCloudMount.
+* **Kebijakan Keamanan & Backup**: Pelajari [SECURITY.md](SECURITY.md) untuk model ancaman dan pelaporan kerentanan, serta [docs/BACKUP-RECOVERY.md](docs/BACKUP-RECOVERY.md) untuk panduan pencadangan konfigurasi yang aman.
 
 ---
 

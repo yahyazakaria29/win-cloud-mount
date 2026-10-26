@@ -17,7 +17,7 @@ Seamlessly mount unlimited cloud storage accounts (Google Drive, OneDrive, Nextc
 
 🌐 [English](README.md) • [Bahasa Indonesia](README.id.md)
 
-[ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 🛠️ Architecture ](#️-architecture) • [ ☕ Support ](#-support-the-project) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
+[ 🚀 Quick Start ](#-quick-start-guide) • [ 🎨 Supported Providers & NAS ](#-supported-cloud-providers--home-server-nas) • [ 📊 Benchmarks ](docs/BENCHMARKS.md) • [ 💾 Backup Guide ](docs/BACKUP-RECOVERY.md) • [ 🔒 Security ](SECURITY.md) • [ ☕ Support ](#-support-the-project) • [ 🗑️ Uninstall ](#️-uninstallation--teardown)
 
 ---
 
@@ -35,9 +35,9 @@ Commercial utilities like **Air Live Drive** and **RaiDrive** impose arbitrary l
 
 | Feature | Air Live Drive (Free) | RaiDrive (Standard) | **WinCloudMount** |
 | :--- | :--- | :--- | :--- |
-| **Simultaneous Cloud Drives** | **1 Drive (Hard Limit)** | 4-8 Drives | **Unlimited (No Limits)** |
-| **Idle Memory Consumption** | ~250 MB – 400 MB | ~180 MB – 300 MB | **~25 MB – 35 MB per drive** |
-| **Idle CPU Usage** | 0.8% – 2.5% (polling) | 0.5% – 1.8% | **0.0% (Native WinFsp Event Proxy)** |
+| **Simultaneous Cloud Drives** | **1 Drive (Hard Limit)** | 4-8 Drives | **No software limit (all available drive letters)** |
+| **Idle Memory Consumption** | ~250 MB – 400 MB | ~180 MB – 300 MB | **~25 MB – 35 MB working set per drive (~60–75 MB private bytes)** |
+| **Idle CPU Usage** | 0.8% – 2.5% (polling) | 0.5% – 1.8% | **< 0.1% idle (Native WinFsp kernel proxy, zero UI polling)** |
 | **Supported Cloud Backends** | ~15 Providers | ~18 Providers | **40+ Backends (via Rclone)** |
 | **VFS Cache Relocation** | Default System `C:\` | Basic | **Per-Drive Partition & Disk Cap** |
 | **Drag-and-Drop Reliability** | Can hang on large bursts | Can hang on large bursts | **Asynchronous Local VFS Staging** |
@@ -243,8 +243,12 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 
 ## 🛡️ Security & Privacy
 
-* **Zero Cloud Intermediaries:** Credentials, OAuth tokens, and encryption keys remain exclusively on your local machine in `%APPDATA%\rclone\rclone.conf`.
+* **Zero Cloud Intermediaries:** Credentials, OAuth tokens, and encryption keys remain exclusively on your local machine in `%APPDATA%
+clone
+clone.conf`.
 * **Private by Default:** `config/drives.json` and all local cache/token files are strictly ignored by `.gitignore` to prevent accidental credential leakage to Git remotes.
+* **Process & Registry Isolation:** Mount processes and Windows Explorer registry updates are scoped strictly to WinCloudMount-managed instances.
+* **Security Policy & Backups:** See [SECURITY.md](SECURITY.md) for our threat model and vulnerability disclosure policy, and [docs/BACKUP-RECOVERY.md](docs/BACKUP-RECOVERY.md) for safe configuration backup procedures.
 
 ---
 
