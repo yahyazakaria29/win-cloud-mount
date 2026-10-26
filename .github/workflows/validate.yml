@@ -2,7 +2,7 @@ name: Validate & Lint
 
 on:
   push:
-    branches: [ main, develop, feature/** ]
+    branches: [ main, develop, feature/**, fix/** ]
   pull_request:
     branches: [ main ]
 
@@ -28,9 +28,26 @@ jobs:
           foreach ($s in $scripts) {
               Write-Host "Parsing syntax for $($s.Name)..."
               $errors = $null
-              [System.Management.Automation.Language.Parser]::ParseFile($s.FullName, [ref]$null, [ref]$errors)
+              $null = [System.Management.Automation.Language.Parser]::ParseFile($s.FullName, [ref]$null, [ref]$errors)
               if ($errors) {
                   throw "Syntax error found in $($s.Name): $errors"
               }
               Write-Host "OK: $($s.Name) syntax is valid."
           }
+
+      - name: Run PSScriptAnalyzer Linting
+        shell: pwsh
+        run: |
+          Write-Host "Checking PSScriptAnalyzer module..."
+          if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
+              Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+          }
+          Write-Host "Running PSScriptAnalyzer (Severity: Error)..."
+          $errors = @('.\scripts', '.\install.ps1', '.\uninstall.ps1') | ForEach-Object {
+              Invoke-ScriptAnalyzer -Path $_ -Recurse -Severity Error
+          }
+          if ($errors) {
+              $errors | Format-Table -AutoSize
+              throw "PSScriptAnalyzer detected $($errors.Count) error-level violations."
+          }
+          Write-Host "OK: PSScriptAnalyzer passed with 0 errors."

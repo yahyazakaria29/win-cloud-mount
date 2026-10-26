@@ -20,6 +20,11 @@ cache/
 logs/
 *.log
 
+# Runtime state & PID files
+.mounts.json
+*.pid
+*.state.json
+
 # Windows temporary & system files
 Thumbs.db
 ehthumbs.db

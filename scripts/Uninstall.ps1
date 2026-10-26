@@ -45,9 +45,11 @@ $mountManager = Join-Path $ScriptDir "Mount-Manager.ps1"
 if (Test-Path $mountManager) {
     & $mountManager -Action stop
 } else {
-    Get-Process -Name "rclone" -ErrorAction SilentlyContinue | Where-Object {
-        (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine -match "mount"
-    } | Stop-Process -Force -ErrorAction SilentlyContinue
+    $projectRootEsc = [regex]::Escape($ProjectRoot)
+    Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" -ErrorAction SilentlyContinue | Where-Object {
+        $cmd = $_.CommandLine
+        $cmd -and ($cmd -match "\bmount\b") -and (($cmd -match $projectRootEsc) -or ($cmd -match "WinCloudMount"))
+    } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 }
 
 # 2. Disable and delete Task Scheduler autostart
@@ -99,10 +101,13 @@ foreach ($let in $driveLetters) {
     }
 }
 
-# Clean stale network mount points
+# Clean stale network mount points for rclone and uninstalled drives
 try {
     Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2" -ErrorAction SilentlyContinue |
-        Where-Object { $_.PSChildName -like "*server*" -or $_.PSChildName -like "*rclone*" } |
+        Where-Object {
+            $child = $_.PSChildName
+            ($child -like "*rclone*") -or ($driveLetters -contains $child)
+        } |
         ForEach-Object {
             Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
         }
