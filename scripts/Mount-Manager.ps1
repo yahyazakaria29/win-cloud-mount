@@ -25,7 +25,7 @@
 [CmdletBinding()]
 param (
     [Parameter(Position = 0)]
-    [ValidateSet("start", "stop", "restart", "status", "test", "unmount")]
+    [ValidateSet("start", "stop", "restart", "status", "test", "unmount", "version")]
     [string]$Action = "status",
 
     [Parameter(Position = 1)]
@@ -35,6 +35,7 @@ param (
     [string]$ConfigFile
 )
 
+$AppVersion = "1.0.0"
 $ErrorActionPreference = "Continue"
 
 # Resolve directories
@@ -63,7 +64,7 @@ if (-not $ConfigFile) {
 
 function Write-MountHeader {
     param ([string]$Title)
-    Write-Host "`n=== WinCloudMount: $Title ===" -ForegroundColor Cyan
+    Write-Host "`n=== WinCloudMount v${AppVersion}: $Title ===" -ForegroundColor Cyan
 }
 
 function Ensure-RcloneInPath {
@@ -431,7 +432,7 @@ function Stop-DriveMount {
         $matched = $false
         $driveInCmd = $null
 
-        if ($cmdLine -match "mount\s+\S+\s+([A-Za-z]:)") {
+        if ($cmdLine -match 'mount\s+"?[^"\s]+"?\s+"?([A-Za-z]:)"?') {
             $driveInCmd = $Matches[1].ToUpper()
         }
 
@@ -494,7 +495,7 @@ function Show-Status {
             $cim = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)" -ErrorAction SilentlyContinue
             $cmd = if ($cim) { $cim.CommandLine } else { "" }
             $mountTarget = "Unknown"
-            if ($cmd -match "mount\s+(\S+)\s+([A-Za-z]:)") {
+            if ($cmd -match 'mount\s+"?([^"\s]+)"?\s+"?([A-Za-z]:)"?') {
                 $mountTarget = "$($Matches[1]) -> $($Matches[2])"
             }
 
@@ -603,5 +604,9 @@ switch ($Action) {
 
     "test" {
         Test-Config
+    }
+
+    "version" {
+        Write-Host "WinCloudMount v$AppVersion (Rclone + WinFsp Virtual Drive Orchestrator)" -ForegroundColor Green
     }
 }
