@@ -515,16 +515,25 @@ function Show-Status {
     $drives = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name -notmatch "^[CD]:\\" }
     if ($drives) {
         $driveDetails = foreach ($d in $drives) {
-            $freeGB  = [math]::Round($d.TotalFreeSpace / 1GB, 2)
-            $totalGB = [math]::Round($d.TotalSize / 1GB, 2)
-            $usedGB  = [math]::Round($totalGB - $freeGB, 2)
+            $freeGB  = $null
+            $totalGB = $null
+            $usedGB  = $null
+            $label   = $d.Name.TrimEnd('\')
+            try {
+                if ($d.IsReady) {
+                    $freeGB  = [math]::Round($d.TotalFreeSpace / 1GB, 2)
+                    $totalGB = [math]::Round($d.TotalSize / 1GB, 2)
+                    $usedGB  = [math]::Round($totalGB - $freeGB, 2)
+                    $label   = $d.VolumeLabel
+                }
+            } catch {}
 
             [PSCustomObject]@{
                 Drive        = $d.Name.TrimEnd('\')
-                Label        = $d.VolumeLabel
-                "Used (GB)"  = $usedGB
-                "Free (GB)"  = $freeGB
-                "Total (GB)" = $totalGB
+                Label        = $label
+                "Used (GB)"  = if ($null -ne $usedGB) { $usedGB } else { "N/A" }
+                "Free (GB)"  = if ($null -ne $freeGB) { $freeGB } else { "N/A" }
+                "Total (GB)" = if ($null -ne $totalGB) { $totalGB } else { "N/A" }
             }
         }
         $driveDetails | Format-Table -AutoSize
