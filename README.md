@@ -243,9 +243,7 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 
 ## 🛡️ Security & Privacy
 
-* **Zero Cloud Intermediaries:** Credentials, OAuth tokens, and encryption keys remain exclusively on your local machine in `%APPDATA%
-clone
-clone.conf`.
+* **Zero Cloud Intermediaries:** Credentials, OAuth tokens, and encryption keys remain exclusively on your local machine in `%APPDATA%\rclone\rclone.conf`.
 * **Private by Default:** `config/drives.json` and all local cache/token files are strictly ignored by `.gitignore` to prevent accidental credential leakage to Git remotes.
 * **Process & Registry Isolation:** Mount processes and Windows Explorer registry updates are scoped strictly to WinCloudMount-managed instances.
 * **Symlink Handling (`--links`):** Symlink translation is kept enabled so Windows Explorer reparse-point probes don't spam logs with `symlinks not supported` errors. A symlink stored on an untrusted cloud share can resolve to a path *outside* the mounted tree; rclone's write-through VFS protects against writes via symlinks, but be cautious when mounting shares you don't fully trust.

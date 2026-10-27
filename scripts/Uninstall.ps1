@@ -12,7 +12,7 @@
     6. Optionally uninstalls Rclone and WinFsp via Winget.
 
 .PARAMETER PurgeCache
-    Delete local VFS cache folders (located on drive D:).
+    Delete local VFS cache folders (e.g. the .cache/ directory).
 
 .PARAMETER RemovePrerequisites
     Uninstall WinFsp and Rclone from Windows via Winget.

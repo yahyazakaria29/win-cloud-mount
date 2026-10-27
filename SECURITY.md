@@ -25,7 +25,7 @@ WinCloudMount is designed with a minimal attack surface and strict principle of 
    Mount management scripts only monitor and terminate `rclone.exe` instances launched specifically from the WinCloudMount installation directory and targeting configured virtual drives. Registry cleanup is confined to WinCloudMount drive branding keys and unmounted rclone mount points.
 
 4. **Resource & Disk Exhaustion Safeguards:**  
-   VFS cache operations enforce a minimum free disk space threshold (`--vfs-cache-min-free-space`, default `5G`) to protect the host operating system drive from storage exhaustion during large background writes.
+   VFS cache operations enforce a minimum free disk space threshold (`--vfs-cache-min-free-space`, default `10G`) to protect the host operating system drive from storage exhaustion during large background writes.
 
 ---
 

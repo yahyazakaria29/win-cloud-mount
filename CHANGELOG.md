@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-10-26
 
 ### Added
-- **Automated VFS Cache Minimum Free Space Enforcement:** Added `--vfs-cache-min-free-space` (default `5G`, configurable via `cache_min_free_space` in `drives.json` and validated by JSON schema) to safeguard host drives from disk exhaustion.
-- **DNS & Network Race Condition Handler:** Intelligent DNS resolution retry (`WaitFor-NetworkReadiness` with adaptive exponential backoff) before mounting drives during early Windows boot.
-- **Automated Windows Autostart Manager:** Seamless Task Scheduler integration via `Setup-Autostart.ps1` with background launcher `Launch-Mounts.vbs` for zero-flash terminal experience.
+- **Automated VFS Cache Minimum Free Space Enforcement:** Added `--vfs-cache-min-free-space` (default `10G`, configurable via `cache_min_free_space` in `drives.json` and validated by JSON schema) to safeguard host drives from disk exhaustion.
+- **DNS & Network Race Condition Handler:** Intelligent DNS resolution retry (`Wait-ForNetworkConnection` with a fixed 2-second polling interval) before mounting drives during early Windows boot.
+- **Automated Windows Autostart Manager:** Seamless Task Scheduler integration via `Setup-Autostart.ps1` with background launcher `launcher/SilentRunner.vbs` for zero-flash terminal experience.
 - **One-Line Web Installer & Uninstaller:** Zero-click installation (`install.ps1`) and clean teardown (`uninstall.ps1`) via PowerShell `irm | iex`.
 - **Explorer Custom Drive Icons & Labels:** Automated per-drive branding registry management with live shell cache refresh via `SHChangeNotify`.
 - **CI / CD Quality Gates:** GitHub Actions workflow featuring PowerShell Language AST parsing, JSON schema validation, and PSScriptAnalyzer error-level linter checks.
