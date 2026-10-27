@@ -8,14 +8,22 @@
     in place and never overwrites your config/drives.json, cache, or logs.
 
     One-line usage (PowerShell):
-        irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
+        irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 | iex
 
     Optional environment variables (set them before running the one-liner):
         WCM_INSTALL_DIR      Install location. Default: %LOCALAPPDATA%\WinCloudMount
-        WCM_BRANCH           Git branch to download. Default: main
+        WCM_BRANCH           Override the pinned release to pull a different Git branch
+                             (NOT recommended for production; confirmed interactively).
+        WCM_SHA256           Expected SHA256 of the package .zip (verifies WCM_SOURCE_ZIP
+                             or the release archive).
         WCM_SKIP_PREREQS     Set to 1 to skip the WinFsp/Rclone installation step.
-        WCM_NONINTERACTIVE   Set to 1 to skip the "run rclone config now?" prompt.
+        WCM_NONINTERACTIVE   Set to 1 to skip all interactive confirmation prompts.
         WCM_SOURCE_ZIP       Use a local .zip instead of downloading (for testing/offline).
+                             Unverified unless WCM_SHA256 is set.
+
+    Security: the installer pins to a tagged release (v1.0.0) and verifies its SHA256
+    before extraction. Non-default code sources (WCM_BRANCH / WCM_SOURCE_ZIP) are
+    printed and require explicit confirmation.
 
 .NOTES
     This script is designed to run through Invoke-Expression, so it never calls 'exit'
@@ -27,8 +35,22 @@
     $ProgressPreference    = 'SilentlyContinue'   # Invoke-WebRequest is much faster without the progress bar
 
     $Repo       = 'yahyazakaria29/win-cloud-mount'
-    $Branch     = if ($env:WCM_BRANCH) { $env:WCM_BRANCH } else { 'main' }
+    $ReleaseTag = 'v1.0.0'   # Pinned release. Bump on each new release.
+    $RefKind    = 'tags'
+    $Ref        = $ReleaseTag
     $InstallDir = if ($env:WCM_INSTALL_DIR) { $env:WCM_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA 'WinCloudMount' }
+
+    # SHA256 of the pinned release package. Populated from the actual release .zip asset.
+    # TODO: isi SHA256 release v1.0.0 — hitung dari asset zip yang di-attach ke GitHub Release
+    #       (bukan archive/refs/tags/*.zip yang tidak byte-stabil), lalu publikasikan di README + release notes.
+    $ReleaseSha256  = ''
+    $ExpectedSha256 = if ($env:WCM_SHA256) { $env:WCM_SHA256 } else { $ReleaseSha256 }
+
+    # Explicit override to pull from a different branch (advanced/testing only).
+    if ($env:WCM_BRANCH) {
+        $RefKind = 'heads'
+        $Ref     = $env:WCM_BRANCH
+    }
 
     function Write-Step ([string]$m) { Write-Host "`n[STEP] $m" -ForegroundColor Cyan }
     function Write-Ok   ([string]$m) { Write-Host "[OK] $m"     -ForegroundColor Green }
@@ -54,7 +76,30 @@
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     } catch { }
     Write-Ok "Windows $([Environment]::OSVersion.Version) (64-bit), PowerShell $($PSVersionTable.PSVersion)"
+
+    # Transparency: report the effective code source and install location BEFORE any download.
+    $codeSourceOverride = $false
+    if ($env:WCM_SOURCE_ZIP) {
+        Write-Note "Package source: WCM_SOURCE_ZIP=$env:WCM_SOURCE_ZIP (local file)"
+        $codeSourceOverride = $true
+    } elseif ($env:WCM_BRANCH) {
+        Write-Note "Package source: WCM_BRANCH=$env:WCM_BRANCH (NOT the pinned release $ReleaseTag)"
+        $codeSourceOverride = $true
+    } else {
+        Write-Ok "Package source: pinned release $ReleaseTag (refs/$RefKind/$Ref)"
+    }
     Write-Note "Install location: $InstallDir"
+    if ($codeSourceOverride) {
+        if ($env:WCM_NONINTERACTIVE -eq '1') {
+            Write-Note 'Non-interactive mode: proceeding with the overridden code source without confirmation.'
+        } else {
+            $confirm = Read-Host 'A non-default code source is configured. Continue? [y/N]'
+            if ($confirm -notmatch '^(y|yes)$') {
+                Write-Fail 'Aborted by user. Refusing to install from a non-pinned source.'
+                return
+            }
+        }
+    }
 
     # ---------------------------------------------------------------- 2. Download
     $workDir = Join-Path ([IO.Path]::GetTempPath()) ("wcm-" + [guid]::NewGuid().ToString('N'))
@@ -66,8 +111,8 @@
             Write-Step "Using local package: $env:WCM_SOURCE_ZIP"
             Copy-Item -LiteralPath $env:WCM_SOURCE_ZIP -Destination $zipPath -Force
         } else {
-            $url = "https://github.com/$Repo/archive/refs/heads/$Branch.zip"
-            Write-Step "Downloading WinCloudMount ($Branch)..."
+            $url = "https://github.com/$Repo/archive/refs/$RefKind/$Ref.zip"
+            Write-Step "Downloading WinCloudMount ($Ref)..."
             try {
                 Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
             } catch {
@@ -78,6 +123,24 @@
             }
         }
         Write-Ok ("Package ready ({0:N0} KB)" -f ((Get-Item $zipPath).Length / 1KB))
+
+        # ------------------------------------------------------------ SHA256 verification
+        # Fail-closed: never extract a package whose checksum cannot be verified.
+        if ($ExpectedSha256) {
+            Write-Step 'Verifying package SHA256...'
+            $actualHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
+            if ($actualHash -ne $ExpectedSha256) {
+                Write-Fail 'SHA256 verification FAILED for the downloaded package.'
+                Write-Fail "  Expected: $ExpectedSha256"
+                Write-Fail "  Actual:   $actualHash"
+                Write-Fail 'Installation aborted; the downloaded file has been removed.'
+                Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue
+                return
+            }
+            Write-Ok "SHA256 checksum verified ($actualHash)."
+        } else {
+            Write-Note 'SHA256 pin is not configured (TODO). Package integrity is NOT cryptographically verified.'
+        }
 
         # ------------------------------------------------------------ 3. Extract & install
         Write-Step 'Installing files...'

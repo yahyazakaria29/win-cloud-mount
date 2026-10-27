@@ -6,14 +6,14 @@ This document outlines the resource consumption model, benchmark methodology, an
 
 ## 1. Resource Consumption & Footprint
 
-Measurements taken on Windows 11 64-bit (Intel Core i7, NVMe SSD) running 4 simultaneous cloud mounts (`E:`, `F:`, `G:`, `O:`) via PowerShell 5.1/7+:
+WinCloudMount measurements below were taken on Windows 11 64-bit (Intel Core i7, NVMe SSD) running 4 simultaneous cloud mounts (`E:`, `F:`, `G:`, `O:`). WinCloudMount's own figures are reproducible with the command in §2. Third-party (Air Live Drive / RaiDrive / Google Drive Desktop) figures are qualitative estimates for orientation only — they were **not** independently measured for this project and must not be cited as benchmark data.
 
 | Metric | Air Live Drive (Free) | RaiDrive (Standard) | Google Drive Desktop | **WinCloudMount (WinFsp + Rclone)** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Max Concurrent Drives** | 1 Drive (License restricted) | 4–8 Drives | 4 Accounts (GDrive only) | **No software limit (all free Windows letters)** |
-| **RAM Footprint (1 Drive Idle)** | ~240 MB – 380 MB | ~180 MB – 290 MB | ~150 MB – 260 MB | **~24 MB – 28 MB Working Set (~68 MB Private)** |
-| **RAM Footprint (4 Drives Idle)** | *N/A (Pro required)* | ~450 MB – 650 MB | *N/A (GDrive only)* | **~98 MB – 115 MB Working Set (Total)** |
-| **CPU Usage (Idle)** | 0.8% – 2.5% (UI polling) | 0.5% – 1.8% | 0.4% – 1.2% | **< 0.1% (Kernel event proxy via WinFsp)** |
+| **RAM Footprint (1 Drive Idle)** | hundreds of MB (heavyweight runtime) | hundreds of MB (heavyweight runtime) | hundreds of MB (heavyweight runtime) | **~24 MB – 28 MB Working Set (~68 MB Private)** |
+| **RAM Footprint (4 Drives Idle)** | *N/A (Pro required)* | higher (additive per-drive) | *N/A (GDrive only)* | **~98 MB – 115 MB Working Set (Total)** |
+| **CPU Usage (Idle)** | non-zero (UI polling) | non-zero (UI polling) | non-zero (UI polling) | **< 0.1% (Kernel event proxy via WinFsp)** |
 | **Runtime Overhead** | WPF / WebView2 background | WPF / Chromium background | Electron / C++ | **Zero UI overhead (Compiled Go + C kernel driver)** |
 | **Kernel Driver Engine** | Dokan / CBFS | CBFS / WinFsp | Proprietary VFS | **WinFsp (Native Windows File System Proxy)** |
 | **Supported Backends** | ~15 Providers | ~18 Providers | Google Drive only | **40+ Backends (Google Drive, OneDrive, S3, WebDAV, SFTP...)** |

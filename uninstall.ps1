@@ -8,7 +8,7 @@
     optionally removes the installation directory and prerequisites.
 
     One-line usage (PowerShell):
-        irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/uninstall.ps1 | iex
+        irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/uninstall.ps1 | iex
 
     Optional environment variables (for non-interactive / scripted teardown):
         WCM_INSTALL_DIR       Install location to clean. Default: %LOCALAPPDATA%\WinCloudMount
@@ -54,6 +54,11 @@
     $RemovePrereqs = $env:WCM_REMOVE_PREREQS -eq '1'
     $DeleteDir = $env:WCM_DELETE_DIR -eq '1'
 
+    # Transparency: report effective teardown flags (including environment overrides).
+    Write-Note "Purge cache      : $(if ($PurgeCache) { 'YES' } else { 'no' })"
+    Write-Note "Remove prereqs   : $(if ($RemovePrereqs) { 'YES' } else { 'no' })"
+    Write-Note "Delete directory : $(if ($DeleteDir) { 'YES' } else { 'no' })"
+
     if ($env:WCM_NONINTERACTIVE -ne '1') {
         # Cache purge prompt
         if (-not $PurgeCache) {
@@ -65,10 +70,10 @@
             $ansPrereq = Read-Host "Uninstall WinFsp and Rclone via Winget? [y/N]"
             if ($ansPrereq -match '^(y|yes)$') { $RemovePrereqs = $true }
         }
-        # Folder delete prompt (only if install folder exists)
+        # Folder delete prompt (only if install folder exists). Default is NO (safe).
         if (-not $DeleteDir -and (Test-Path $InstallDir)) {
-            $ansDir = Read-Host "Delete WinCloudMount directory ($InstallDir)? [Y/n]"
-            if ($ansDir -notmatch '^(n|no)$') { $DeleteDir = $true }
+            $ansDir = Read-Host "Delete WinCloudMount directory ($InstallDir)? [y/N]"
+            if ($ansDir -match '^(y|yes)$') { $DeleteDir = $true }
         }
     }
 
@@ -98,6 +103,19 @@
 
     # 5. Clean registry customizations (Drive icons and labels)
     Write-Step 'Cleaning Windows Explorer registry entries...'
+
+    # Ownership check: is a DefaultIcon value (or generic registry value) owned by WinCloudMount?
+    function Test-WinCloudMountIconValue {
+        param([string]$Value)
+        if (-not $Value) { return $false }
+        if ($Value -match [regex]::Escape($InstallDir)) { return $true }
+        if ($Value -match 'WinCloudMount') { return $true }
+        foreach ($icon in @('googledrive.ico','onedrive.ico','dropbox.ico','nextcloud.ico','box.ico','mega.ico','protondrive.ico','s3.ico')) {
+            if ($Value -match [regex]::Escape($icon)) { return $true }
+        }
+        return $false
+    }
+
     $letters = @()
     $configFile = Join-Path $InstallDir 'config\drives.json'
     if (Test-Path $configFile) {
@@ -108,12 +126,24 @@
             }
         } catch { }
     }
-    # Check all possible letters E to Z
+    # Verify ownership of E-Z letters before deleting: only remove a letter whose
+    # DefaultIcon points into the install directory, mentions WinCloudMount, or
+    # references a bundled project icon. Never remove third-party drive branding.
     foreach ($l in [char[]](69..90)) {
-        $k = "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\$l"
-        if (Test-Path $k) {
-            if (-not ($letters -contains [string]$l)) { $letters += [string]$l }
+        $letter = [string]$l
+        if ($letters -contains $letter) { continue }
+
+        $owned = $false
+        foreach ($key in @(
+            "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\$letter\DefaultIcon",
+            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\$letter\DefaultIcon"
+        )) {
+            if (Test-Path $key) {
+                $val = (Get-ItemProperty -Path $key -Name '(Default)' -ErrorAction SilentlyContinue).'(Default)'
+                if (Test-WinCloudMountIconValue -Value $val) { $owned = $true }
+            }
         }
+        if ($owned) { $letters += $letter }
     }
 
     foreach ($let in $letters) {
@@ -129,14 +159,24 @@
         }
     }
 
-    # Clean stale network mount points for rclone and uninstalled drives
+    # Clean stale MountPoints2 entries ONLY for verified WinCloudMount drives. Unverifiable
+    # entries are left untouched (better a small orphan than deleting a third-party share).
     try {
         Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2' -ErrorAction SilentlyContinue |
-            Where-Object {
+            ForEach-Object {
                 $child = $_.PSChildName
-                ($child -like '*rclone*') -or ($letters -contains $child)
-            } |
-            ForEach-Object { Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue }
+                $shouldRemove = $false
+                foreach ($let in $letters) {
+                    if ($child -eq $let) { $shouldRemove = $true; break }
+                }
+                if (-not $shouldRemove -and $child -like '*rclone*') {
+                    $val = (Get-ItemProperty -Path $_.PSPath -Name '(Default)' -ErrorAction SilentlyContinue).'(Default)'
+                    if (Test-WinCloudMountIconValue -Value $val) { $shouldRemove = $true }
+                }
+                if ($shouldRemove) {
+                    Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
     } catch { }
 
     # Refresh Windows Shell icon cache
@@ -159,27 +199,97 @@ public class ShellRefreshUninstaller {
     # 6. Purge cache if requested
     if ($PurgeCache) {
         Write-Step 'Purging VFS cache files...'
+
+        function Test-UnsafePurgePath {
+            # Returns $true when a path must NEVER be purged (system-critical or user-profile roots).
+            param([string]$Path)
+            if (-not $Path) { return $true }
+
+            $full = $null
+            try { $full = [System.IO.Path]::GetFullPath($Path).TrimEnd('\') } catch { return $true }
+            if (-not $full) { return $true }
+
+            $root = [System.IO.Path]::GetPathRoot($full)
+            if ($root -and $full -eq $root.TrimEnd('\')) { return $true }
+
+            foreach ($d in @(
+                [Environment]::GetFolderPath('Windows'),
+                [Environment]::GetFolderPath('System'),
+                [Environment]::GetFolderPath('ProgramFiles'),
+                [Environment]::GetFolderPath('ProgramFilesX86')
+            )) {
+                if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
+            }
+
+            $profile = [Environment]::GetFolderPath('UserProfile')
+            if ($profile -and $full -eq $profile.TrimEnd('\')) { return $true }
+            $special = @(
+                [Environment]::GetFolderPath('MyDocuments'),
+                [Environment]::GetFolderPath('DesktopDirectory'),
+                [Environment]::GetFolderPath('MyPictures'),
+                [Environment]::GetFolderPath('MyMusic'),
+                [Environment]::GetFolderPath('MyVideos')
+            )
+            if ($profile) {
+                $special += (Join-Path $profile 'Downloads')
+                $special += (Join-Path $profile 'OneDrive')
+                $special += (Join-Path $profile 'Documents')
+                $special += (Join-Path $profile 'Desktop')
+            }
+            foreach ($d in $special) {
+                if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
+            }
+            return $false
+        }
+
+        # Collect cache paths: relative paths resolve against install dir; absolute as-is.
+        $cachePaths = @()
         if (Test-Path $configFile) {
             try {
                 $configs = Get-Content -Raw -Path $configFile | ConvertFrom-Json
                 foreach ($c in $configs) {
                     $cDir = $c.cache_dir
-                    if ($cDir -and -not [IO.Path]::IsPathRooted($cDir)) {
-                        $cDir = Join-Path $InstallDir $cDir
-                    }
-                    if ($cDir -and (Test-Path $cDir)) {
-                        Remove-Item -Path $cDir -Recurse -Force -ErrorAction SilentlyContinue
-                        Write-Note "Purged: $cDir"
+                    if ($cDir) {
+                        if (-not [IO.Path]::IsPathRooted($cDir)) {
+                            $cDir = Join-Path $InstallDir $cDir
+                        }
+                        $cachePaths += $cDir
                     }
                 }
             } catch { }
         }
         $dotCache = Join-Path $InstallDir '.cache'
-        if (Test-Path $dotCache) {
-            Remove-Item -Path $dotCache -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Note "Purged: $dotCache"
+        if (-not ($cachePaths -contains $dotCache)) { $cachePaths += $dotCache }
+
+        foreach ($path in $cachePaths) {
+            if (-not $path -or -not (Test-Path -LiteralPath $path)) { continue }
+
+            $full = [System.IO.Path]::GetFullPath($path)
+
+            if (Test-UnsafePurgePath -Path $full) {
+                Write-Note "SKIPPING unsafe purge path: $full (system/user-critical folder)"
+                continue
+            }
+
+            $installPrefix = $InstallDir.TrimEnd('\') + '\'
+            $outside = -not $full.StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+                       -not ($full -eq $InstallDir.TrimEnd('\'))
+            if ($outside -and $env:WCM_ALLOW_EXTERNAL_CACHE_PURGE -ne '1') {
+                Write-Note "SKIPPING external cache path (outside install dir; set WCM_ALLOW_EXTERNAL_CACHE_PURGE=1 to allow): $full"
+                continue
+            }
+
+            $doPurge = $true
+            if ($env:WCM_NONINTERACTIVE -ne '1') {
+                $ans = Read-Host "Purge cache path: $full ? [y/N]"
+                if ($ans -notmatch '^(y|yes)$') { $doPurge = $false }
+            }
+            if ($doPurge) {
+                Remove-Item -LiteralPath $full -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Note "Purged: $full"
+            }
         }
-        Write-Ok 'Local VFS cache purged.'
+        Write-Ok 'Local VFS cache purge finished.'
     }
 
     # 7. Remove Prerequisites if requested

@@ -36,8 +36,8 @@ Commercial utilities like **Air Live Drive** and **RaiDrive** impose arbitrary l
 | Feature | Air Live Drive (Free) | RaiDrive (Standard) | **WinCloudMount** |
 | :--- | :--- | :--- | :--- |
 | **Simultaneous Cloud Drives** | **1 Drive (Hard Limit)** | 4-8 Drives | **No software limit (all available drive letters)** |
-| **Idle Memory Consumption** | ~250 MB – 400 MB | ~180 MB – 300 MB | **~25 MB – 35 MB working set per drive (~60–75 MB private bytes)** |
-| **Idle CPU Usage** | 0.8% – 2.5% (polling) | 0.5% – 1.8% | **< 0.1% idle (Native WinFsp kernel proxy, zero UI polling)** |
+| **Idle Memory Consumption** | hundreds of MB (heavyweight runtime) | hundreds of MB (heavyweight runtime) | **~25 MB – 35 MB working set per drive (~60–75 MB private bytes)** |
+| **Idle CPU Usage** | non-zero (UI polling) | non-zero (UI polling) | **< 0.1% idle (Native WinFsp kernel proxy, zero UI polling)** |
 | **Supported Cloud Backends** | ~15 Providers | ~18 Providers | **40+ Backends (via Rclone)** |
 | **VFS Cache Relocation** | Default System `C:\` | Basic | **Per-Drive Partition & Disk Cap** |
 | **Drag-and-Drop Reliability** | Can hang on large bursts | Can hang on large bursts | **Asynchronous Local VFS Staging** |
@@ -81,8 +81,10 @@ Both options produce the same result. Pick whichever you are comfortable with.
 Open **PowerShell** (no need for "Run as administrator") and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 | iex
 ```
+
+> 🔒 **Pinned release, not `main`:** the one-liner installs from the `v1.0.0` release tag, so you get a reviewed, versioned snapshot — not whatever is currently on the `main` branch. New releases require bumping the tag in this command.
 
 What it does:
 1. Downloads WinCloudMount to `%LOCALAPPDATA%\WinCloudMount` (no Git required).
@@ -94,7 +96,7 @@ Running the same command again later **updates** the scripts and keeps your conf
 
 > 🔒 **Prefer to read the script first?** That's good practice. Download it, review it, then run it:
 > ```powershell
-> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 -OutFile install.ps1
+> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 -OutFile install.ps1
 > notepad install.ps1
 > powershell -ExecutionPolicy Bypass -File .\install.ps1
 > ```
@@ -214,7 +216,7 @@ See [docs/PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md) for step-by-step connecti
 Open PowerShell and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/uninstall.ps1 | iex
 ```
 
 What it does interactively:
@@ -243,11 +245,10 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 
 ## 🛡️ Security & Privacy
 
-* **Zero Cloud Intermediaries:** Credentials, OAuth tokens, and encryption keys remain exclusively on your local machine in `%APPDATA%
-clone
-clone.conf`.
+* **Zero Cloud Intermediaries:** Credentials, OAuth tokens, and encryption keys remain exclusively on your local machine in `%APPDATA%\rclone\rclone.conf`.
 * **Private by Default:** `config/drives.json` and all local cache/token files are strictly ignored by `.gitignore` to prevent accidental credential leakage to Git remotes.
 * **Process & Registry Isolation:** Mount processes and Windows Explorer registry updates are scoped strictly to WinCloudMount-managed instances.
+* **Symlink Handling (`--links`):** Symlink translation is kept enabled so Windows Explorer reparse-point probes don't spam logs with `symlinks not supported` errors. A symlink stored on an untrusted cloud share can resolve to a path *outside* the mounted tree; rclone's write-through VFS protects against writes via symlinks, but be cautious when mounting shares you don't fully trust.
 * **Security Policy & Backups:** See [SECURITY.md](SECURITY.md) for our threat model and vulnerability disclosure policy, and [docs/BACKUP-RECOVERY.md](docs/BACKUP-RECOVERY.md) for safe configuration backup procedures.
 
 ---
@@ -272,6 +273,20 @@ If **WinCloudMount** saves your system RAM and cloud subscription budget, consid
 <sub>🇮🇩 **Indonesia:** QRIS • ShopeePay • GoPay • OVO • DANA • Bank Transfer</sub>
 
 </div>
+
+---
+
+## 📦 Release Process (for maintainers)
+
+The one-liner verifies a SHA256 of the release archive, so publishing a release is a deliberate, ordered sequence — never edit `$ReleaseTag`/`$ReleaseSha256` in `install.ps1` until the tag actually exists:
+
+1. **Merge** the release branch into `main`.
+2. **Tag** the release from `main`, e.g. `git tag v1.1.0 && git push origin v1.1.0`.
+3. **Build the package zip** of that tag and **attach it as a GitHub Release asset** (upload the file to the release — do **not** rely on GitHub's auto-generated `archive/refs/tags/*.zip`, whose hash is not byte-stable).
+4. **Compute the SHA256** of the attached asset: `Get-FileHash .\win-cloud-mount-v1.1.0.zip -Algorithm SHA256`.
+5. **Update `install.ps1` on `main`** with `$ReleaseTag = 'v1.1.0'` and `$ReleaseSha256 = '<computed hash>'`, then update the one-liner URLs in `README.md` / `README.id.md` to the new tag.
+
+Why this is not circular: the one-liner fetches `install.ps1` from `main` via `raw.githubusercontent.com` — that script is the **verifier**, trusted via GitHub HTTPS + your account. The file it *verifies* is the pinned Release asset, trusted via the SHA256 you published in step 5. Until a hash is filled in, `install.ps1` prints a prominent "SHA256 pin is not configured (TODO)" warning and does **not** fail closed — see `SECURITY.md`.
 
 ---
 

@@ -53,14 +53,24 @@
         "pattern": "^[0-9]+[MGTPmgtp]$",
         "description": "Maximum chunk size ceiling for streaming requests."
       },
+      "upload_chunk_size": {
+        "type": "string",
+        "pattern": "^[0-9]+[MGTPmgtp]$",
+        "description": "Chunk size for multipart cloud uploads, e.g. '32M'."
+      },
       "read_only": {
         "type": "boolean",
         "description": "Mount as read-only volume if true."
+      },
+      "network_mode": {
+        "type": "boolean",
+        "description": "Mount as a network share instead of a fixed local disk when true."
       },
       "icon": {
         "type": "string",
         "description": "Absolute or relative path to a .ico file for custom File Explorer branding."
       }
-    }
+    },
+    "additionalProperties": false
   }
 }

@@ -67,7 +67,7 @@ The VFS caching layer reconciles this impedance mismatch:
         YES                       NO
         /                          \
 Read from local sparse file   Download 16MB chunk via HTTP Range request
-(Instant memory/disk speed)   Store chunk in cache directory (D:/Cache)
+(Instant memory/disk speed)   Store chunk in cache directory (.cache/<drive_name>)
                                Serve bytes 5000-8000 to Windows
 ```
 
