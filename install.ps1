@@ -8,7 +8,7 @@
     in place and never overwrites your config/drives.json, cache, or logs.
 
     One-line usage (PowerShell):
-        irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 | iex
+        irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
 
     Optional environment variables (set them before running the one-liner):
         WCM_INSTALL_DIR      Install location. Default: %LOCALAPPDATA%\WinCloudMount
@@ -35,22 +35,14 @@
     $ProgressPreference    = 'SilentlyContinue'   # Invoke-WebRequest is much faster without the progress bar
 
     $Repo       = 'yahyazakaria29/win-cloud-mount'
-    $ReleaseTag = 'v1.0.0'   # Pinned release. Bump on each new release.
-    $RefKind    = 'tags'
-    $Ref        = $ReleaseTag
+    $ReleaseTag = 'v1.1.1'   # Pinned release. Bump on each new release.
     $InstallDir = if ($env:WCM_INSTALL_DIR) { $env:WCM_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA 'WinCloudMount' }
 
-    # SHA256 of the pinned release package. Populated from the actual release .zip asset.
-    # TODO: isi SHA256 release v1.0.0 — hitung dari asset zip yang di-attach ke GitHub Release
-    #       (bukan archive/refs/tags/*.zip yang tidak byte-stabil), lalu publikasikan di README + release notes.
-    $ReleaseSha256  = ''
+    # SHA256 of the pinned release ASSET (the zip attached to the GitHub Release). This
+    # is the byte-stable file the installer downloads and verifies; recompute and bump it
+    # on every release. The value below is the hash of win-cloud-mount-v1.1.1.zip.
+    $ReleaseSha256  = '7D43206FF482424FA99FC315CAF1670F72B4D606AE6B0775652481EB5D09E5BF'
     $ExpectedSha256 = if ($env:WCM_SHA256) { $env:WCM_SHA256 } else { $ReleaseSha256 }
-
-    # Explicit override to pull from a different branch (advanced/testing only).
-    if ($env:WCM_BRANCH) {
-        $RefKind = 'heads'
-        $Ref     = $env:WCM_BRANCH
-    }
 
     function Write-Step ([string]$m) { Write-Host "`n[STEP] $m" -ForegroundColor Cyan }
     function Write-Ok   ([string]$m) { Write-Host "[OK] $m"     -ForegroundColor Green }
@@ -86,7 +78,7 @@
         Write-Note "Package source: WCM_BRANCH=$env:WCM_BRANCH (NOT the pinned release $ReleaseTag)"
         $codeSourceOverride = $true
     } else {
-        Write-Ok "Package source: pinned release $ReleaseTag (refs/$RefKind/$Ref)"
+        Write-Ok "Package source: pinned release $ReleaseTag (release asset, SHA256-verified)"
     }
     Write-Note "Install location: $InstallDir"
     if ($codeSourceOverride) {
@@ -111,8 +103,15 @@
             Write-Step "Using local package: $env:WCM_SOURCE_ZIP"
             Copy-Item -LiteralPath $env:WCM_SOURCE_ZIP -Destination $zipPath -Force
         } else {
-            $url = "https://github.com/$Repo/archive/refs/$RefKind/$Ref.zip"
-            Write-Step "Downloading WinCloudMount ($Ref)..."
+            if ($env:WCM_BRANCH) {
+                # Explicit override to pull a branch's auto-generated archive (advanced/testing).
+                $url = "https://github.com/$Repo/archive/refs/heads/$env:WCM_BRANCH.zip"
+                Write-Step "Downloading WinCloudMount (branch $env:WCM_BRANCH)..."
+            } else {
+                # Default: the pinned release ASSET (byte-stable, SHA256-verified below).
+                $url = "https://github.com/$Repo/releases/download/$ReleaseTag/win-cloud-mount-$ReleaseTag.zip"
+                Write-Step "Downloading WinCloudMount ($ReleaseTag release asset)..."
+            }
             try {
                 Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
             } catch {
