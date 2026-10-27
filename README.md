@@ -276,6 +276,20 @@ If **WinCloudMount** saves your system RAM and cloud subscription budget, consid
 
 ---
 
+## 📦 Release Process (for maintainers)
+
+The one-liner verifies a SHA256 of the release archive, so publishing a release is a deliberate, ordered sequence — never edit `$ReleaseTag`/`$ReleaseSha256` in `install.ps1` until the tag actually exists:
+
+1. **Merge** the release branch into `main`.
+2. **Tag** the release from `main`, e.g. `git tag v1.1.0 && git push origin v1.1.0`.
+3. **Build the package zip** of that tag and **attach it as a GitHub Release asset** (upload the file to the release — do **not** rely on GitHub's auto-generated `archive/refs/tags/*.zip`, whose hash is not byte-stable).
+4. **Compute the SHA256** of the attached asset: `Get-FileHash .\win-cloud-mount-v1.1.0.zip -Algorithm SHA256`.
+5. **Update `install.ps1` on `main`** with `$ReleaseTag = 'v1.1.0'` and `$ReleaseSha256 = '<computed hash>'`, then update the one-liner URLs in `README.md` / `README.id.md` to the new tag.
+
+Why this is not circular: the one-liner fetches `install.ps1` from `main` via `raw.githubusercontent.com` — that script is the **verifier**, trusted via GitHub HTTPS + your account. The file it *verifies* is the pinned Release asset, trusted via the SHA256 you published in step 5. Until a hash is filled in, `install.ps1` prints a prominent "SHA256 pin is not configured (TODO)" warning and does **not** fail closed — see `SECURITY.md`.
+
+---
+
 ## 🤝 Contributing
 
 Contributions, bug reports, and optimizations are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting pull requests.

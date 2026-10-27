@@ -224,6 +224,20 @@ Jika **WinCloudMount** membantu menghemat RAM laptop Anda dan menghemat biaya la
 
 ---
 
+## 📦 Proses Rilis (untuk maintainer)
+
+One-liner memverifikasi SHA256 dari arsip rilis, sehingga merilis versi baru adalah urutan yang disengaja — jangan pernah mengedit `$ReleaseTag`/`$ReleaseSha256` di `install.ps1` sebelum tag-nya benar-benar ada:
+
+1. **Merge** branch rilis ke `main`.
+2. **Tag** rilis dari `main`, mis. `git tag v1.1.0 && git push origin v1.1.0`.
+3. **Bangun zip paket** dari tag tersebut dan **lampirkan sebagai asset GitHub Release** (upload file ke release — **jangan** mengandalkan `archive/refs/tags/*.zip` buatan otomatis GitHub, yang hash-nya tidak byte-stabil).
+4. **Hitung SHA256** asset yang dilampirkan: `Get-FileHash .\win-cloud-mount-v1.1.0.zip -Algorithm SHA256`.
+5. **Perbarui `install.ps1` di `main`** dengan `$ReleaseTag = 'v1.1.0'` dan `$ReleaseSha256 = '<hash hasil perhitungan>'`, lalu perbarui URL one-liner di `README.md` / `README.id.md` ke tag baru.
+
+Kenapa ini tidak sirkular: one-liner mengambil `install.ps1` dari `main` lewat `raw.githubusercontent.com` — skrip itu adalah **verifier**, dipercaya lewat HTTPS GitHub + akun Anda. File yang *diverifikasi* adalah asset Release yang terkunci, dipercaya lewat SHA256 yang Anda publikasikan di langkah 5. Selama hash belum diisi, `install.ps1` mencetak peringatan mencolok "SHA256 pin is not configured (TODO)" dan **tidak** gagal-tutup — lihat `SECURITY.md`.
+
+---
+
 ## 📄 Lisensi
 Perangkat lunak ini dirilis di bawah lisensi terbuka [MIT License](LICENSE).  
 Hak Cipta (c) 2026 Yahya Zakaria.
