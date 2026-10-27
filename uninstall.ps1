@@ -86,7 +86,8 @@
         $installDirEsc = [regex]::Escape($InstallDir)
         Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" -ErrorAction SilentlyContinue | Where-Object {
             $cmd = $_.CommandLine
-            $cmd -and ($cmd -match "\bmount\b") -and (($cmd -match $installDirEsc) -or ($cmd -match "WinCloudMount"))
+            # Precise ownership: install dir path only (see Stop-DriveMount rationale).
+            $cmd -and ($cmd -match "\bmount\b") -and ($cmd -match $installDirEsc)
         } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
         Write-Ok 'WinCloudMount rclone processes stopped.'
     }

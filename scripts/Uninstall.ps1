@@ -48,7 +48,8 @@ if (Test-Path $mountManager) {
     $projectRootEsc = [regex]::Escape($ProjectRoot)
     Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" -ErrorAction SilentlyContinue | Where-Object {
         $cmd = $_.CommandLine
-        $cmd -and ($cmd -match "\bmount\b") -and (($cmd -match $projectRootEsc) -or ($cmd -match "WinCloudMount"))
+        # Precise ownership: project root path only (see Stop-DriveMount rationale).
+        $cmd -and ($cmd -match "\bmount\b") -and ($cmd -match $projectRootEsc)
     } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 }
 
