@@ -8,7 +8,7 @@
     optionally removes the installation directory and prerequisites.
 
     One-line usage (PowerShell):
-        irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/uninstall.ps1 | iex
+        irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/uninstall.ps1 | iex
 
     Optional environment variables (for non-interactive / scripted teardown):
         WCM_INSTALL_DIR       Install location to clean. Default: %LOCALAPPDATA%\WinCloudMount

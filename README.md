@@ -81,8 +81,10 @@ Both options produce the same result. Pick whichever you are comfortable with.
 Open **PowerShell** (no need for "Run as administrator") and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 | iex
 ```
+
+> 🔒 **Pinned release, not `main`:** the one-liner installs from the `v1.0.0` release tag, so you get a reviewed, versioned snapshot — not whatever is currently on the `main` branch. New releases require bumping the tag in this command.
 
 What it does:
 1. Downloads WinCloudMount to `%LOCALAPPDATA%\WinCloudMount` (no Git required).
@@ -94,7 +96,7 @@ Running the same command again later **updates** the scripts and keeps your conf
 
 > 🔒 **Prefer to read the script first?** That's good practice. Download it, review it, then run it:
 > ```powershell
-> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 -OutFile install.ps1
+> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 -OutFile install.ps1
 > notepad install.ps1
 > powershell -ExecutionPolicy Bypass -File .\install.ps1
 > ```
@@ -214,7 +216,7 @@ See [docs/PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md) for step-by-step connecti
 Open PowerShell and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/uninstall.ps1 | iex
 ```
 
 What it does interactively:

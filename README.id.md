@@ -56,8 +56,10 @@ Kedua opsi menghasilkan instalasi yang sama. Pilih yang paling nyaman.
 Buka **PowerShell** biasa (tidak perlu "Run as administrator"), lalu tempel:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 | iex
 ```
+
+> 🔒 **Rilis terkunci, bukan `main`:** installer satu baris memasang dari tag rilis `v1.0.0`, sehingga Anda mendapat snapshot yang telah direview dan berversi — bukan apa pun yang sedang ada di branch `main`. Rilis baru berarti menaikkan tag pada perintah ini.
 
 Yang dilakukan perintah ini:
 1. Mengunduh WinCloudMount ke `%LOCALAPPDATA%\WinCloudMount` (tidak perlu Git).
@@ -69,7 +71,7 @@ Menjalankan perintah yang sama di lain waktu akan **memperbarui** skrip tanpa me
 
 > 🔒 **Ingin membaca skripnya dulu?** Itu kebiasaan yang baik. Unduh, periksa, lalu jalankan:
 > ```powershell
-> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 -OutFile install.ps1
+> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 -OutFile install.ps1
 > notepad install.ps1
 > powershell -ExecutionPolicy Bypass -File .\install.ps1
 > ```
@@ -163,7 +165,7 @@ WinCloudMount menyertakan bundel file `.ico` resmi multi-resolusi (16x16 hingga 
 Buka PowerShell biasa lalu tempel perintah:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/uninstall.ps1 | iex
 ```
 
 Yang dilakukan skrip ini secara interaktif:
