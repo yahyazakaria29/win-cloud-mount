@@ -32,7 +32,10 @@ param (
     [string]$DriveLetter,
 
     [Parameter()]
-    [string]$ConfigFile
+    [string]$ConfigFile,
+
+    [Parameter()]
+    [switch]$UseExample
 )
 
 $AppVersion = "1.0.0"
@@ -48,17 +51,26 @@ if (-not (Test-Path $LogDir)) {
 }
 
 # Resolve Configuration
+# Note: we no longer silently fall back to drives.example.json. Missing drives.json is a
+# hard error for actions that need a config (start/restart/test); 'status' and 'version'
+# work without it. Demo mode is opt-in via -UseExample.
 if (-not $ConfigFile) {
-    $ConfigFile = Join-Path $ProjectRoot "config\drives.json"
+    if ($UseExample) {
+        $ConfigFile = Join-Path $ProjectRoot "config\drives.example.json"
+    } else {
+        $ConfigFile = Join-Path $ProjectRoot "config\drives.json"
+    }
+}
+
+function Assert-DriveConfigExists {
+    # Fails fast with actionable guidance when drives.json is missing for a config-requiring action.
     if (-not (Test-Path $ConfigFile)) {
-        $ExampleConfig = Join-Path $ProjectRoot "config\drives.example.json"
-        if (Test-Path $ExampleConfig) {
-            Write-Warning "config/drives.json not found. Using config/drives.example.json as template..."
-            $ConfigFile = $ExampleConfig
-        } else {
-            Write-Error "No configuration file found at $ConfigFile. Please create config/drives.json."
-            exit 1
-        }
+        Write-Error "Configuration file not found: $ConfigFile"
+        Write-Error "Create it first, then edit it to set your remotes and drive letters:"
+        Write-Error "    Copy-Item config\drives.example.json config\drives.json"
+        Write-Error "    notepad config\drives.json"
+        Write-Error "Or run with -UseExample to demo against the sample configuration."
+        exit 1
     }
 }
 
@@ -477,17 +489,39 @@ function Start-DriveMount {
 
         $proc = Start-Process -FilePath $rcloneExe -ArgumentList $argList -WindowStyle Hidden -PassThru
 
-        # Wait briefly and verify mount health
+        # Wait briefly and verify the drive actually appears in the OS. A live process alone
+        # is NOT proof of a successful mount (WinFsp can leave rclone running without the
+        # drive registering in Explorer).
         Start-Sleep -Seconds 3
-        $checkDrive = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
-        if ($checkDrive -or (-not $proc.HasExited)) {
+
+        $mounted = $false
+        try {
+            $drivePresent   = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name.TrimEnd('\') -eq $driveLet }
+            $psDrivePresent = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
+            if ($drivePresent -or $psDrivePresent) { $mounted = $true }
+        } catch {}
+
+        if ($mounted) {
             Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon -VolumeLabel $volName -RemoteName $DriveConfig.remote -ConfigName $DriveConfig.name
             Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id))" -ForegroundColor Green
             return
         }
+
+        # Not mounted yet: terminate this attempt's process so the next attempt does not
+        # contend for the same drive letter with a stuck half-mount.
+        if ($proc -and -not $proc.HasExited) {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+        }
     }
 
     Write-Host "   [FAILED] Failed to mount $driveLet after $maxAttempts attempts. Check log: $logFile" -ForegroundColor Red
+    # Tail the log so the user can diagnose without opening the file manually.
+    if (Test-Path $logFile) {
+        try {
+            Write-Host "   Last log lines ($logFile):" -ForegroundColor Yellow
+            Get-Content -Path $logFile -Tail 10 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
+        } catch {}
+    }
 }
 
 function Stop-DriveMount {
@@ -668,12 +702,12 @@ function Test-Config {
 }
 
 # --- Execution Router ---
-if (-not (Test-Prerequisites)) {
-    exit 1
-}
-
+# Prerequisite gate is per-action: 'version' and 'status' must always work (they are the
+# diagnostic tools for an incomplete install), so only config/mount actions gate on rclone+WinFsp.
 switch ($Action) {
     "start" {
+        if (-not (Test-Prerequisites)) { exit 1 }
+        Assert-DriveConfigExists
         Write-MountHeader "Starting Configured Virtual Drives"
         $null = Wait-ForNetworkConnection
         $configs = @(Load-DriveConfig)
@@ -701,6 +735,8 @@ switch ($Action) {
     }
 
     "restart" {
+        if (-not (Test-Prerequisites)) { exit 1 }
+        Assert-DriveConfigExists
         Write-MountHeader "Restarting Virtual Drives"
         Stop-DriveMount -TargetDrive $DriveLetter
         Start-Sleep -Seconds 1
@@ -712,6 +748,8 @@ switch ($Action) {
     }
 
     "test" {
+        if (-not (Test-Prerequisites)) { exit 1 }
+        Assert-DriveConfigExists
         Test-Config
     }
 
