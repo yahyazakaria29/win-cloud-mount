@@ -56,10 +56,10 @@ Kedua opsi menghasilkan instalasi yang sama. Pilih yang paling nyaman.
 Buka **PowerShell** biasa (tidak perlu "Run as administrator"), lalu tempel:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
 ```
 
-> 🔒 **Rilis terkunci, bukan `main`:** installer satu baris memasang dari tag rilis `v1.0.0`, sehingga Anda mendapat snapshot yang telah direview dan berversi — bukan apa pun yang sedang ada di branch `main`. Rilis baru berarti menaikkan tag pada perintah ini.
+> 🔒 **Payload terkunci rilis:** one-liner mengambil skrip installer kecil dari `main`, tetapi installer itu mengunduh **asset rilis terkunci** (`v1.1.0`) dan memverifikasi SHA256-nya sebelum mengekstrak. Jadi kode yang benar-benar terpasang adalah snapshot yang telah direview dan berversi — bukan apa pun yang sedang ada di `main`. Lihat [Proses Rilis](#-proses-rilis-untuk-maintainer).
 
 Yang dilakukan perintah ini:
 1. Mengunduh WinCloudMount ke `%LOCALAPPDATA%\WinCloudMount` (tidak perlu Git).
@@ -71,7 +71,7 @@ Menjalankan perintah yang sama di lain waktu akan **memperbarui** skrip tanpa me
 
 > 🔒 **Ingin membaca skripnya dulu?** Itu kebiasaan yang baik. Unduh, periksa, lalu jalankan:
 > ```powershell
-> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 -OutFile install.ps1
+> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 -OutFile install.ps1
 > notepad install.ps1
 > powershell -ExecutionPolicy Bypass -File .\install.ps1
 > ```
@@ -165,7 +165,7 @@ WinCloudMount menyertakan bundel file `.ico` resmi multi-resolusi (16x16 hingga 
 Buka PowerShell biasa lalu tempel perintah:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/uninstall.ps1 | iex
 ```
 
 Yang dilakukan skrip ini secara interaktif:
@@ -232,9 +232,9 @@ One-liner memverifikasi SHA256 dari arsip rilis, sehingga merilis versi baru ada
 2. **Tag** rilis dari `main`, mis. `git tag v1.1.0 && git push origin v1.1.0`.
 3. **Bangun zip paket** dari tag tersebut dan **lampirkan sebagai asset GitHub Release** (upload file ke release — **jangan** mengandalkan `archive/refs/tags/*.zip` buatan otomatis GitHub, yang hash-nya tidak byte-stabil).
 4. **Hitung SHA256** asset yang dilampirkan: `Get-FileHash .\win-cloud-mount-v1.1.0.zip -Algorithm SHA256`.
-5. **Perbarui `install.ps1` di `main`** dengan `$ReleaseTag = 'v1.1.0'` dan `$ReleaseSha256 = '<hash hasil perhitungan>'`, lalu perbarui URL one-liner di `README.md` / `README.id.md` ke tag baru.
+5. **Perbarui `install.ps1` di `main`** dengan `$ReleaseTag = 'v1.1.0'` dan `$ReleaseSha256 = '<hash hasil perhitungan>'`. URL one-liner tetap `main/install.ps1` dan tidak perlu diubah per rilis — hanya dua nilai di dalam `install.ps1` yang berubah.
 
-Kenapa ini tidak sirkular: one-liner mengambil `install.ps1` dari `main` lewat `raw.githubusercontent.com` — skrip itu adalah **verifier**, dipercaya lewat HTTPS GitHub + akun Anda. File yang *diverifikasi* adalah asset Release yang terkunci, dipercaya lewat SHA256 yang Anda publikasikan di langkah 5. Selama hash belum diisi, `install.ps1` mencetak peringatan mencolok "SHA256 pin is not configured (TODO)" dan **tidak** gagal-tutup — lihat `SECURITY.md`.
+Kenapa ini tidak sirkular: one-liner mengambil `install.ps1` dari `main` lewat `raw.githubusercontent.com` — skrip itu adalah **verifier**, dipercaya lewat HTTPS GitHub + akun Anda. File yang *diverifikasi* adalah asset Release yang terkunci, dipercaya lewat SHA256 yang Anda publikasikan di langkah 5. Jika `$ReleaseSha256` kosong (hanya selama jeda antara tagging dan pengisian hash), `install.ps1` mencetak peringatan mencolok "SHA256 pin is not configured" dan **tidak** gagal-tutup — lihat `SECURITY.md`.
 
 ---
 

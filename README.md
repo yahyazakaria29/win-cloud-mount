@@ -81,10 +81,10 @@ Both options produce the same result. Pick whichever you are comfortable with.
 Open **PowerShell** (no need for "Run as administrator") and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
 ```
 
-> 🔒 **Pinned release, not `main`:** the one-liner installs from the `v1.0.0` release tag, so you get a reviewed, versioned snapshot — not whatever is currently on the `main` branch. New releases require bumping the tag in this command.
+> 🔒 **Release-pinned payload:** the one-liner fetches the small installer script from `main`, but that installer downloads a **pinned release asset** (`v1.1.0`) and verifies its SHA256 before extracting. So the code you actually install is a reviewed, versioned snapshot — not whatever is currently on `main`. See [Release Process](#-release-process-for-maintainers).
 
 What it does:
 1. Downloads WinCloudMount to `%LOCALAPPDATA%\WinCloudMount` (no Git required).
@@ -96,7 +96,7 @@ Running the same command again later **updates** the scripts and keeps your conf
 
 > 🔒 **Prefer to read the script first?** That's good practice. Download it, review it, then run it:
 > ```powershell
-> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 -OutFile install.ps1
+> irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 -OutFile install.ps1
 > notepad install.ps1
 > powershell -ExecutionPolicy Bypass -File .\install.ps1
 > ```
@@ -216,7 +216,7 @@ See [docs/PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md) for step-by-step connecti
 Open PowerShell and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/uninstall.ps1 | iex
 ```
 
 What it does interactively:
@@ -284,9 +284,9 @@ The one-liner verifies a SHA256 of the release archive, so publishing a release 
 2. **Tag** the release from `main`, e.g. `git tag v1.1.0 && git push origin v1.1.0`.
 3. **Build the package zip** of that tag and **attach it as a GitHub Release asset** (upload the file to the release — do **not** rely on GitHub's auto-generated `archive/refs/tags/*.zip`, whose hash is not byte-stable).
 4. **Compute the SHA256** of the attached asset: `Get-FileHash .\win-cloud-mount-v1.1.0.zip -Algorithm SHA256`.
-5. **Update `install.ps1` on `main`** with `$ReleaseTag = 'v1.1.0'` and `$ReleaseSha256 = '<computed hash>'`, then update the one-liner URLs in `README.md` / `README.id.md` to the new tag.
+5. **Update `install.ps1` on `main`** with `$ReleaseTag = 'v1.1.0'` and `$ReleaseSha256 = '<computed hash>'`. The one-liner URL stays `main/install.ps1` and never needs to change per release — only the two values inside `install.ps1` change.
 
-Why this is not circular: the one-liner fetches `install.ps1` from `main` via `raw.githubusercontent.com` — that script is the **verifier**, trusted via GitHub HTTPS + your account. The file it *verifies* is the pinned Release asset, trusted via the SHA256 you published in step 5. Until a hash is filled in, `install.ps1` prints a prominent "SHA256 pin is not configured (TODO)" warning and does **not** fail closed — see `SECURITY.md`.
+Why this is not circular: the one-liner fetches `install.ps1` from `main` via `raw.githubusercontent.com` — that script is the **verifier**, trusted via GitHub HTTPS + your account. The file it *verifies* is the pinned Release asset, trusted via the SHA256 you published in step 5. If `$ReleaseSha256` is ever empty (only during the window between tagging and filling the hash), `install.ps1` prints a prominent "SHA256 pin is not configured" warning and does **not** fail closed — see `SECURITY.md`.
 
 ---
 
