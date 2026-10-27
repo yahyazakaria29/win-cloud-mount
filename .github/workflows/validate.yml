@@ -16,10 +16,13 @@ jobs:
       - name: Validate JSON Schema & Examples
         shell: pwsh
         run: |
-          Write-Host "Validating drives.example.json syntax..."
-          $json = Get-Content -Raw .\config\drives.example.json | ConvertFrom-Json
-          if (-not $json) { throw "Invalid drives.example.json format" }
-          Write-Host "drives.example.json is valid JSON with $($json.Count) configured drives."
+          Write-Host "Validating drives.example.json against config/schema.json..."
+          $result = Test-Json -Path .\config\drives.example.json -SchemaFile .\config\schema.json
+          if (-not $result) {
+              Write-Host "::error::drives.example.json does not conform to config/schema.json"
+              throw "drives.example.json failed schema validation"
+          }
+          Write-Host "OK: drives.example.json conforms to config/schema.json."
 
       - name: Validate PowerShell Script Syntax
         shell: pwsh
