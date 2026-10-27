@@ -51,7 +51,7 @@ Write-Host "Backup completed to: $BackupDir" -ForegroundColor Cyan
 ### Step 1: Install WinCloudMount
 On the target machine, run the one-line installer in PowerShell:
 ```powershell
-irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/v1.0.0/install.ps1 | iex
+irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
 ```
 
 ### Step 2: Restore Configuration Files
