@@ -544,6 +544,9 @@ function Start-DriveMount {
         $pollStart = Get-Date
         while (((Get-Date) - $pollStart).TotalSeconds -lt $attemptPollLimitSeconds) {
             Start-Sleep -Seconds $pollIntervalSeconds
+            # Refresh() is required: Process.HasExited is cached, so without it an early
+            # rclone exit (e.g. bad remote) would not be seen until the 30s window expires.
+            try { $proc.Refresh() } catch {}
             if ($proc.HasExited) { break }   # rclone crashed / gave up - stop polling
             try {
                 $drivePresent   = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name.TrimEnd('\') -eq $driveLet }
@@ -561,6 +564,7 @@ function Start-DriveMount {
 
         # Not mounted within the window: report how long we waited and why, then terminate
         # this attempt so the next one does not contend for the same drive letter.
+        try { $proc.Refresh() } catch {}
         $why = if ($proc.HasExited) { 'rclone process exited' } else { 'drive not detected (WinFsp handshake timeout)' }
         Write-Host "   Attempt ${attempt}: not mounted after ~${elapsed}s ($why)" -ForegroundColor Yellow
         if ($proc -and -not $proc.HasExited) {
