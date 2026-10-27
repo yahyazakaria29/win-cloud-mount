@@ -64,7 +64,19 @@ if (Test-Path $setupAutostart) {
 # 3. Clean up Windows Registry (DriveIcons, Classes, MountPoints2)
 Write-Host "`n[3/5] Cleaning up Windows Explorer drive registry customizations..." -ForegroundColor Cyan
 
-# Gather configured drive letters
+# Ownership check: is a DefaultIcon value (or generic registry value) owned by WinCloudMount?
+function Test-WinCloudMountIconValue {
+    param([string]$Value)
+    if (-not $Value) { return $false }
+    if ($Value -match [regex]::Escape($ProjectRoot)) { return $true }
+    if ($Value -match 'WinCloudMount') { return $true }
+    foreach ($icon in @('googledrive.ico','onedrive.ico','dropbox.ico','nextcloud.ico','box.ico','mega.ico','protondrive.ico','s3.ico')) {
+        if ($Value -match [regex]::Escape($icon)) { return $true }
+    }
+    return $false
+}
+
+# Gather configured drive letters (always treated as owned)
 $driveLetters = @()
 if (Test-Path $ConfigFile) {
     try {
@@ -77,12 +89,24 @@ if (Test-Path $ConfigFile) {
     } catch {}
 }
 
-# Also check any letters from E to Z that have WinCloudMount custom keys
+# Verify ownership of any E-Z letter carrying a drive-icon key BEFORE adding it to the
+# delete list. A letter is only removed when its DefaultIcon points at this project's
+# install directory, mentions WinCloudMount, or references one of the bundled icons.
 foreach ($l in [char[]](69..90)) { # E through Z
-    $classesKey = "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\$l"
-    if (Test-Path $classesKey) {
-        if (-not ($driveLetters -contains [string]$l)) { $driveLetters += [string]$l }
+    $letter = [string]$l
+    if ($driveLetters -contains $letter) { continue }
+
+    $owned = $false
+    foreach ($key in @(
+        "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\$letter\DefaultIcon",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\$letter\DefaultIcon"
+    )) {
+        if (Test-Path $key) {
+            $val = (Get-ItemProperty -Path $key -Name '(Default)' -ErrorAction SilentlyContinue).'(Default)'
+            if (Test-WinCloudMountIconValue -Value $val) { $owned = $true }
+        }
     }
+    if ($owned) { $driveLetters += $letter }
 }
 
 foreach ($let in $driveLetters) {
@@ -101,15 +125,23 @@ foreach ($let in $driveLetters) {
     }
 }
 
-# Clean stale network mount points for rclone and uninstalled drives
+# Clean stale MountPoints2 entries ONLY for verified WinCloudMount drives. Unverifiable
+# entries are left untouched (better a small orphan than deleting a third-party share).
 try {
     Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2" -ErrorAction SilentlyContinue |
-        Where-Object {
-            $child = $_.PSChildName
-            ($child -like "*rclone*") -or ($driveLetters -contains $child)
-        } |
         ForEach-Object {
-            Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
+            $child = $_.PSChildName
+            $shouldRemove = $false
+            foreach ($let in $driveLetters) {
+                if ($child -eq $let) { $shouldRemove = $true; break }
+            }
+            if (-not $shouldRemove -and $child -like "*rclone*") {
+                $val = (Get-ItemProperty -Path $_.PSPath -Name '(Default)' -ErrorAction SilentlyContinue).'(Default)'
+                if (Test-WinCloudMountIconValue -Value $val) { $shouldRemove = $true }
+            }
+            if ($shouldRemove) {
+                Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
+            }
         }
 } catch {}
 

@@ -156,32 +156,51 @@ function Get-DriveConfigErrors {
     $errors
 }
 
+function Get-ConfiguredDriveLetters {
+    # Returns the list of drive letters declared in config/drives.json (uppercase, no colon).
+    # Used to scope registry cleanup to managed drives only.
+    $letters = @()
+    try {
+        $cfg = Get-Content -Raw -Path $ConfigFile -ErrorAction Stop | ConvertFrom-Json
+        foreach ($c in @($cfg)) {
+            if ($c.drive_letter) { $letters += $c.drive_letter.ToUpper().TrimEnd(':') }
+        }
+    } catch {}
+    $letters
+}
+
 function Clear-StaleNetworkMountPoints {
     param (
         [string[]]$TargetLetters = @()
     )
-    # Cleans up orphaned Windows Shell network mount point entries that cause disconnected drive icons (red X)
+    # Cleans up orphaned Windows Shell network mount point entries that cause disconnected
+    # drive icons (red X). Ownership is strictly verified: we never sweep arbitrary *rclone*
+    # keys, only exact managed drive letters or entries that provably reference this
+    # project's install directory. Unverifiable entries are left untouched.
     try {
         $mountPointsKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2"
         if (-not (Test-Path $mountPointsKey)) { return }
+
+        # When no explicit letters are supplied (e.g. a generic stop), limit to drives.json.
+        if (-not $TargetLetters -or $TargetLetters.Count -eq 0) {
+            $TargetLetters = @(Get-ConfiguredDriveLetters)
+        }
+        $cleanLetters = @($TargetLetters | ForEach-Object { $_.ToUpper().TrimEnd(':') })
+        $projectRootEsc = [regex]::Escape($ProjectRoot)
 
         Get-ChildItem $mountPointsKey -ErrorAction SilentlyContinue | ForEach-Object {
             $childName = $_.PSChildName
             $shouldRemove = $false
 
-            # Target rclone specific mount point keys
-            if ($childName -like "*rclone*") {
+            if ($cleanLetters -contains $childName) {
                 $shouldRemove = $true
-            }
-
-            # Target only explicitly managed drive letter keys if provided
-            if ($TargetLetters -and $TargetLetters.Count -gt 0) {
-                foreach ($tl in $TargetLetters) {
-                    $cleanLetter = $tl.ToUpper().TrimEnd(':')
-                    if ($childName -eq $cleanLetter) {
-                        $shouldRemove = $true
-                        break
-                    }
+            } elseif ($childName -like "*rclone*") {
+                # rclone-named key: remove only if it references this project's install dir.
+                $val      = (Get-ItemProperty -Path $_.PSPath -Name '(Default)'      -ErrorAction SilentlyContinue).'(Default)'
+                $labelVal = (Get-ItemProperty -Path $_.PSPath -Name '_LabelFromReg'  -ErrorAction SilentlyContinue).'_LabelFromReg'
+                if (($val      -and ($val      -match $projectRootEsc -or $val      -match 'WinCloudMount')) -or
+                    ($labelVal -and ($labelVal -match $projectRootEsc -or $labelVal -match 'WinCloudMount'))) {
+                    $shouldRemove = $true
                 }
             }
 
