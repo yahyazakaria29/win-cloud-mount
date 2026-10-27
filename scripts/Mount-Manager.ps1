@@ -117,6 +117,45 @@ function Load-DriveConfig {
     }
 }
 
+function Get-DriveConfigErrors {
+    # Returns an array of human-readable validation errors for a single drive config.
+    # Empty array = valid. Used by both 'test' and 'start' so a misconfigured drive is
+    # rejected with a field-specific message before it ever reaches `rclone mount`.
+    param ($DriveConfig)
+
+    $errors = @()
+
+    # Required fields
+    if (-not $DriveConfig.remote)       { $errors += "missing required field 'remote'" }
+    if (-not $DriveConfig.drive_letter) { $errors += "missing required field 'drive_letter'" }
+    if (-not $DriveConfig.volume_name)  { $errors += "missing required field 'volume_name'" }
+
+    # drive_letter must be a single letter plus colon (e.g. 'E:')
+    if ($DriveConfig.drive_letter -and $DriveConfig.drive_letter -notmatch '^[A-Za-z]:$') {
+        $errors += "drive_letter '$($DriveConfig.drive_letter)' must match '^[A-Za-z]:$'"
+    }
+
+    # Injection safety: values interpolated into the rclone command line must never
+    # contain a double-quote or control character, or they could break out of the
+    # argument quoting and inject a new rclone flag (e.g. --config, --log-file).
+    foreach ($field in @('remote', 'volume_name', 'cache_dir', 'name')) {
+        $val = $DriveConfig.$field
+        if ($val -and ($val -match '["\p{Cc}]')) {
+            $errors += "$field contains an illegal double-quote or control character"
+        }
+    }
+
+    # Size fields, when set, must be <number><unit> with unit M/G/T/P (case-insensitive).
+    foreach ($field in @('cache_size', 'cache_min_free_space', 'buffer_size', 'read_chunk_size', 'read_chunk_limit', 'upload_chunk_size')) {
+        $val = $DriveConfig.$field
+        if ($val -and ($val -notmatch '^[0-9]+[MGTPmgtp]$')) {
+            $errors += "$field '$val' must match '^[0-9]+[MGTPmgtp]$'"
+        }
+    }
+
+    $errors
+}
+
 function Clear-StaleNetworkMountPoints {
     param (
         [string[]]$TargetLetters = @()
@@ -287,6 +326,14 @@ public class ShellNotifier {
 function Start-DriveMount {
     param ($DriveConfig)
 
+    # Reject invalid / injectable configuration before any side effect.
+    $cfgErrors = @(Get-DriveConfigErrors $DriveConfig)
+    if ($cfgErrors.Count -gt 0) {
+        Write-Error "Drive '$($DriveConfig.name)' has invalid configuration:"
+        foreach ($e in $cfgErrors) { Write-Error "  - $e" }
+        return
+    }
+
     $driveLet = $DriveConfig.drive_letter.ToUpper()
     if (-not $driveLet.EndsWith(":")) { $driveLet = "$driveLet`:" }
     $letterOnly = $driveLet.TrimEnd(':')
@@ -338,6 +385,15 @@ function Start-DriveMount {
     $rcloneCmd = Get-Command rclone -ErrorAction SilentlyContinue
     $rcloneExe = if ($rcloneCmd) { $rcloneCmd.Source } else { "rclone.exe" }
 
+    # Argument passing strategy (verified on this machine, PowerShell 5.1 + 7.6):
+    #   Start-Process -ArgumentList does NOT re-quote raw array elements that contain
+    #   whitespace; a raw array is joined with plain spaces, so "C:\Users\Some One\cache"
+    #   would split into multiple tokens. Elements that themselves embed the surrounding
+    #   double quotes, however, are preserved intact when the array is passed directly.
+    #   We therefore keep each token pre-quoted where it contains whitespace (remote,
+    #   drive letter, volume name, cache dir, log file) and pass the array straight to
+    #   -ArgumentList WITHOUT a "-join ' '". Combined with Get-DriveConfigErrors (which
+    #   rejects embedded double-quotes/control chars), the quoting cannot be escaped.
     $argList = @(
         "mount",
         "`"$($DriveConfig.remote)`"",
@@ -375,8 +431,6 @@ function Start-DriveMount {
         $argList += "--read-only"
     }
 
-    $argString = $argList -join " "
-
     Write-Host "-> Launching mount: $($DriveConfig.remote) => $driveLet [$volName]" -ForegroundColor Cyan
     Write-Host "   Cache: $cacheDir (Cap: $cacheSize, MinFree: $cacheMinFree) | Buffer: $bufferSize" -ForegroundColor Gray
 
@@ -388,7 +442,7 @@ function Start-DriveMount {
             Start-Sleep -Seconds 4
         }
 
-        $proc = Start-Process -FilePath $rcloneExe -ArgumentList $argString -WindowStyle Hidden -PassThru
+        $proc = Start-Process -FilePath $rcloneExe -ArgumentList $argList -WindowStyle Hidden -PassThru
 
         # Wait briefly and verify mount health
         Start-Sleep -Seconds 3
