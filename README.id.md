@@ -196,6 +196,7 @@ clone
 clone.conf` pada laptop Anda sendiri.
 * **Aman dari Kebocoran Git**: File `drives.json`, cache VFS, dan kredensial otomatis diabaikan oleh `.gitignore`.
 * **Isolasi Proses & Registry**: Pengelolaan proses dan registri Windows Explorer dibatasi hanya untuk drive terkelola WinCloudMount.
+* **Penanganan Symlink (`--links`)**: Translasi symlink tetap diaktifkan agar probe reparse-point Windows Explorer tidak membanjiri log dengan error `symlinks not supported`. Symlink pada cloud share yang tidak tepercaya bisa merujuk ke path *di luar* pohon drive; proteksi write-through rclone melindungi dari penulisan lewat symlink, namun berhati-hatilah saat me-mount share yang tidak sepenuhnya tepercaya.
 * **Kebijakan Keamanan & Backup**: Pelajari [SECURITY.md](SECURITY.md) untuk model ancaman dan pelaporan kerentanan, serta [docs/BACKUP-RECOVERY.md](docs/BACKUP-RECOVERY.md) untuk panduan pencadangan konfigurasi yang aman.
 
 ---

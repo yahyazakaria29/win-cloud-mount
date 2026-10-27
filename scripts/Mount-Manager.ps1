@@ -368,6 +368,17 @@ public class ShellNotifier {
     }
 }
 
+function Test-GoogleDriveRemote {
+    # Heuristic backend detection: returns $true when a remote's root name looks like a
+    # Google Drive remote (gdrive/googledrive/google). Used to scope --drive-* flags.
+    # NOTE: this is a name heuristic, not a rclone backend query; a precisely-named
+    # non-drive remote (e.g. a WebDAV remote called 'google_photos') would be misclassified.
+    param([string]$Remote)
+    if (-not $Remote) { return $false }
+    $root = if ($Remote -match '^([^:]+:)') { $Matches[1] } else { $Remote }
+    return ($root.ToLower() -match '(gdrive|googledrive|google)')
+}
+
 function Start-DriveMount {
     param ($DriveConfig)
 
@@ -385,10 +396,17 @@ function Start-DriveMount {
 
     Clear-StaleNetworkMountPoints -TargetLetters @($letterOnly)
 
-    # Check if drive letter is currently taken
-    $existing = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
-    if ($existing) {
-        Write-Warning "Drive $driveLet is already in use by $($existing.Provider.Name) [$($existing.Description)]. Skipping..."
+    # Check if the drive letter is currently taken. Get-PSDrive is session-scoped and
+    # misses some WinFsp volumes, so also query the kernel via DriveInfo (which catches
+    # --network-mode mounts that may not appear as a regular PSDrive).
+    $existingPsDrive = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
+    $existingVolume  = $null
+    try {
+        $existingVolume = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name.TrimEnd('\') -eq $driveLet }
+    } catch {}
+    if ($existingPsDrive -or $existingVolume) {
+        $desc = if ($existingPsDrive) { "$($existingPsDrive.Provider.Name) [$($existingPsDrive.Description)]" } else { "an existing volume" }
+        Write-Warning "Drive $driveLet is already in use by $desc. Skipping..."
         return
     }
 
@@ -453,19 +471,25 @@ function Start-DriveMount {
         "--buffer-size $bufferSize",
         "--vfs-read-chunk-size $readChunkSize",
         "--vfs-read-chunk-size-limit $readChunkLimit",
-        "--drive-chunk-size $uploadChunk",
         "--vfs-fast-fingerprint",
         "--dir-cache-time 24h",
         "--attr-timeout 24h",
         "--poll-interval 1m",
-        "--drive-pacer-min-sleep 10ms",
-        "--drive-pacer-burst 200",
         "--links",
         "--no-modtime",
         "--user-agent `"WinCloudMount/1.0.0 (Windows)`"",
         "--log-file `"$logFile`"",
         "--log-level NOTICE"
     )
+
+    # Google Drive-specific backend flags are added ONLY when the remote is detected as a
+    # Google Drive remote (by name). These flags are no-ops on S3/SFTP/WebDAV/NAS backends,
+    # so applying them globally was misleading.
+    if (Test-GoogleDriveRemote -Remote $DriveConfig.remote) {
+        $argList += "--drive-chunk-size $uploadChunk"
+        $argList += "--drive-pacer-min-sleep 10ms"
+        $argList += "--drive-pacer-burst 200"
+    }
 
     if ($DriveConfig.network_mode -eq $true) {
         # Optional network mode if user explicitly wants it in drives.json
@@ -607,8 +631,16 @@ function Stop-DriveMount {
 function Show-Status {
     Write-MountHeader "Active Mount Status & Resource Efficiency"
 
-    $procs = Get-Process -Name "rclone" -ErrorAction SilentlyContinue
-    if (-not $procs) {
+    # Scope to WinCloudMount-owned rclone processes only (same filter as Stop-DriveMount),
+    # so a user's separate out-of-project rclone mounts are not shown as this project's.
+    $projectRootEsc = [regex]::Escape($ProjectRoot)
+    $wcmPids = @(Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" -ErrorAction SilentlyContinue | Where-Object {
+        $cmd = $_.CommandLine
+        $cmd -and ($cmd -match "\bmount\b") -and (($cmd -match $projectRootEsc) -or ($cmd -match "WinCloudMount"))
+    } | ForEach-Object { $_.ProcessId })
+
+    $procs = @(Get-Process -Name "rclone" -ErrorAction SilentlyContinue | Where-Object { $wcmPids -contains $_.Id })
+    if (-not $procs -or $procs.Count -eq 0) {
         Write-Host "No active rclone mount processes running." -ForegroundColor Yellow
     } else {
         Write-Host "`nRunning Rclone Processes:" -ForegroundColor White
