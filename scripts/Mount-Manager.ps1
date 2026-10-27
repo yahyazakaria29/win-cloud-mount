@@ -595,8 +595,12 @@ function Stop-DriveMount {
     $wcmProcs = @($allProcs | Where-Object {
         $cmd = $_.CommandLine
         if (-not $cmd -or ($cmd -notmatch "\bmount\b")) { return $false }
-        # Match only processes belonging to WinCloudMount (by project root path, cache-dir/log-file, or user-agent)
-        ($cmd -match $projectRootEsc) -or ($cmd -match "WinCloudMount")
+        # Match only processes belonging to THIS WinCloudMount installation. The project
+        # root path is the precise ownership signal (it appears in every --log-file path,
+        # which is always <project root>\logs\<name>_mount.log). Do NOT match the bare
+        # substring "WinCloudMount": it also appears in --user-agent for every mount, so a
+        # broad match would terminate another installation's drives.
+        ($cmd -match $projectRootEsc)
     })
 
     if (-not $wcmProcs -or $wcmProcs.Count -eq 0) {
@@ -670,7 +674,8 @@ function Show-Status {
     $projectRootEsc = [regex]::Escape($ProjectRoot)
     $wcmPids = @(Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" -ErrorAction SilentlyContinue | Where-Object {
         $cmd = $_.CommandLine
-        $cmd -and ($cmd -match "\bmount\b") -and (($cmd -match $projectRootEsc) -or ($cmd -match "WinCloudMount"))
+        # Precise ownership: project root path only (see Stop-DriveMount for rationale).
+        $cmd -and ($cmd -match "\bmount\b") -and ($cmd -match $projectRootEsc)
     } | ForEach-Object { $_.ProcessId })
 
     $procs = @(Get-Process -Name "rclone" -ErrorAction SilentlyContinue | Where-Object { $wcmPids -contains $_.Id })
