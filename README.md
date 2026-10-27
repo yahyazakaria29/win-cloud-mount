@@ -36,8 +36,8 @@ Commercial utilities like **Air Live Drive** and **RaiDrive** impose arbitrary l
 | Feature | Air Live Drive (Free) | RaiDrive (Standard) | **WinCloudMount** |
 | :--- | :--- | :--- | :--- |
 | **Simultaneous Cloud Drives** | **1 Drive (Hard Limit)** | 4-8 Drives | **No software limit (all available drive letters)** |
-| **Idle Memory Consumption** | ~250 MB – 400 MB | ~180 MB – 300 MB | **~25 MB – 35 MB working set per drive (~60–75 MB private bytes)** |
-| **Idle CPU Usage** | 0.8% – 2.5% (polling) | 0.5% – 1.8% | **< 0.1% idle (Native WinFsp kernel proxy, zero UI polling)** |
+| **Idle Memory Consumption** | hundreds of MB (heavyweight runtime) | hundreds of MB (heavyweight runtime) | **~25 MB – 35 MB working set per drive (~60–75 MB private bytes)** |
+| **Idle CPU Usage** | non-zero (UI polling) | non-zero (UI polling) | **< 0.1% idle (Native WinFsp kernel proxy, zero UI polling)** |
 | **Supported Cloud Backends** | ~15 Providers | ~18 Providers | **40+ Backends (via Rclone)** |
 | **VFS Cache Relocation** | Default System `C:\` | Basic | **Per-Drive Partition & Disk Cap** |
 | **Drag-and-Drop Reliability** | Can hang on large bursts | Can hang on large bursts | **Asynchronous Local VFS Staging** |

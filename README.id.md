@@ -36,8 +36,8 @@ Software komersial seperti **Air Live Drive** atau **RaiDrive** membatasi fitur 
 | Fitur / Metrik | Air Live Drive (Free) | RaiDrive (Standard) | **WinCloudMount** |
 | :--- | :--- | :--- | :--- |
 | **Batas Drive Simultan** | **1 Drive (Terkunci Lisensi)** | 4-8 Drives | **Tanpa batas software (hingga seluruh huruf drive Windows)** |
-| **Konsumsi RAM saat Idle** | ~250 MB – 400 MB | ~180 MB – 300 MB | **~25 MB – 35 MB working set per drive (~60–75 MB private bytes)** |
-| **Penggunaan CPU saat Idle** | 0.8% – 2.5% | 0.5% – 1.8% | **< 0.1% idle (Kernel event proxy WinFsp, tanpa polling UI)** |
+| **Konsumsi RAM saat Idle** | ratusan MB (runtime berat) | ratusan MB (runtime berat) | **~25 MB – 35 MB working set per drive (~60–75 MB private bytes)** |
+| **Penggunaan CPU saat Idle** | non-zero (polling UI) | non-zero (polling UI) | **< 0.1% idle (Kernel event proxy WinFsp, tanpa polling UI)** |
 | **Dukungan Provider Cloud** | ~15 Provider | ~18 Provider | **40+ Provider (via Rclone)** |
 | **Lokasi Cache VFS** | Drive Sistem `C:\` | Dasar | **Terisolasi di `.cache/` (Bebas Partisi)** |
 | **Branding Drive** | Icon Generik / Network Share | Khusus | **Fixed Disk Lokal + Icon Resmi Provider** |
