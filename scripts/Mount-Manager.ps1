@@ -258,28 +258,42 @@ function Resolve-DriveIcon {
 
     # 2. Smart auto-detection from Remote, VolumeLabel, or ConfigName
     $identifier = "$RemoteName $VolumeLabel $ConfigName".ToLower()
-    $providerMap = @{
+
+    # Ordered map so more-specific provider names are tested before shorter, overlapping
+    # ones (dropbox before box, googledrive before google). This prevents a Dropbox drive
+    # from being mis-detected as Box because "box" is a substring of "dropbox".
+    $providerMap = [ordered]@{
         "onedrive"    = "onedrive.ico"
         "sharepoint"  = "onedrive.ico"
         "dropbox"     = "dropbox.ico"
         "nextcloud"   = "nextcloud.ico"
         "owncloud"    = "nextcloud.ico"
-        "box"         = "box.ico"
-        "mega"        = "mega.ico"
         "proton"      = "protondrive.ico"
-        "s3"          = "s3.ico"
-        "amazon"      = "s3.ico"
-        "wasabi"      = "s3.ico"
-        "backblaze"   = "s3.ico"
-        "b2"          = "s3.ico"
-        "minio"       = "s3.ico"
-        "google"      = "googledrive.ico"
+        "googledrive" = "googledrive.ico"
         "gdrive"      = "googledrive.ico"
+        "google"      = "googledrive.ico"
+        "backblaze"   = "s3.ico"
+        "wasabi"      = "s3.ico"
+        "amazon"      = "s3.ico"
+        "minio"       = "s3.ico"
+        "mega"        = "mega.ico"
+        "box"         = "box.ico"
     }
 
     foreach ($k in $providerMap.Keys) {
         if ($identifier -match $k) {
             $cand = Join-Path $ProjectRoot "assets\icons\$($providerMap[$k])"
+            if (Test-Path $cand) { return $cand }
+        }
+    }
+
+    # 's3' and 'b2' are matched with word boundaries so the short tokens do not
+    # false-positive on substrings: 'lab2_nas' must NOT match 'b2', while 's3_backup'
+    # (underscore counts as a boundary) matches 's3'.
+    foreach ($k in @('s3', 'b2')) {
+        $boundaryPattern = '(^|[^a-z0-9])' + $k + '($|[^a-z0-9])'
+        if ($identifier -match $boundaryPattern) {
+            $cand = Join-Path $ProjectRoot "assets\icons\s3.ico"
             if (Test-Path $cand) { return $cand }
         }
     }
@@ -630,12 +644,25 @@ function Test-Config {
         Write-Host "  Buffer Size : $(if ($d.buffer_size) { $d.buffer_size } else { '16M (default)' })"
         Write-Host "  Upload Chunk: $(if ($d.upload_chunk_size) { $d.upload_chunk_size } else { '32M (optimized)' })"
 
-        # Check if remote exists in rclone config
-        $checkRemote = & rclone listremotes 2>$null | Where-Object { $_ -eq $d.remote }
-        if ($checkRemote) {
-            Write-Host "  Remote Check: [FOUND] Configured in rclone.conf" -ForegroundColor Green
+        # Field validation: missing required fields, invalid patterns, injectable values.
+        $cfgErrors = @(Get-DriveConfigErrors $d)
+        if ($cfgErrors.Count -gt 0) {
+            Write-Host "  Config: [INVALID]" -ForegroundColor Red
+            foreach ($e in $cfgErrors) { Write-Host "    - $e" -ForegroundColor Red }
         } else {
-            Write-Host "  Remote Check: [NOT CONFIGURED] Run 'rclone config' to add this remote!" -ForegroundColor Yellow
+            Write-Host "  Config: [OK]" -ForegroundColor Green
+        }
+
+        # rclone listremotes returns ROOT remotes only (e.g. 'home_nas:'), so a subpath
+        # remote like 'home_nas:/mnt/storage' must be compared by its root, not the full path.
+        $remoteRoot = if ($d.remote -and $d.remote -match '^([^:]+:)') { $Matches[1] } elseif ($d.remote) { "$($d.remote):" } else { '' }
+        if ($remoteRoot) {
+            $checkRemote = & rclone listremotes 2>$null | Where-Object { $_ -eq $remoteRoot }
+            if ($checkRemote) {
+                Write-Host "  Remote Check: [FOUND] '$remoteRoot' configured in rclone.conf" -ForegroundColor Green
+            } else {
+                Write-Host "  Remote Check: [NOT CONFIGURED] root '$remoteRoot' is not in rclone.conf. Run 'rclone config' to add it." -ForegroundColor Yellow
+            }
         }
     }
 }
