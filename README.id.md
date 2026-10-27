@@ -208,16 +208,12 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Uninstall.ps1 -PurgeCache
 Jika **WinCloudMount** membantu menghemat RAM laptop Anda dan menghemat biaya langganan aplikasi virtual drive berbayar, Anda dapat mentraktir secangkir kopi untuk mendukung pengembangannya!
 
 <p align="center">
-  <a href="https://saweria.co/anakrantau29">
-    <img src="https://img.shields.io/badge/Saweria-Traktir_Kopi_(QRIS)-FFC107?style=for-the-badge&logo=google-pay&logoColor=black" alt="Traktir Kopi via Saweria">
-  </a>
+  <a href="https://saweria.co/anakrantau29"><img src="https://img.shields.io/badge/Saweria-Traktir_Kopi_(QRIS)-FFC107?style=for-the-badge&logo=google-pay&logoColor=black" alt="Traktir Kopi via Saweria"></a>
   &nbsp;&nbsp;
-  <a href="https://ko-fi.com/anakrantau29">
-    <img src="https://img.shields.io/badge/Ko--fi-Buy_Me_a_Coffee-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Dukung di Ko-fi">
-  </a>
+  <a href="https://ko-fi.com/anakrantau29"><img src="https://img.shields.io/badge/Ko--fi-Buy_Me_a_Coffee-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Dukung di Ko-fi"></a>
 </p>
 
-<sub>🇮🇩 **Indonesia:** QRIS • ShopeePay • GoPay • OVO • DANA • Virtual Account Bank</sub><br>
+<sub><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f1ee-1f1e9.png?v8" width="14" height="14" alt="Indonesia" valign="middle"> **Indonesia:** QRIS • ShopeePay • GoPay • OVO • DANA • Virtual Account Bank</sub><br>
 <sub>🌍 **Internasional:** Kartu Kredit/Debit • PayPal • Apple Pay • Google Pay</sub>
 
 </div>
