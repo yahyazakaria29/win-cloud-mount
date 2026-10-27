@@ -54,6 +54,11 @@
     $RemovePrereqs = $env:WCM_REMOVE_PREREQS -eq '1'
     $DeleteDir = $env:WCM_DELETE_DIR -eq '1'
 
+    # Transparency: report effective teardown flags (including environment overrides).
+    Write-Note "Purge cache      : $(if ($PurgeCache) { 'YES' } else { 'no' })"
+    Write-Note "Remove prereqs   : $(if ($RemovePrereqs) { 'YES' } else { 'no' })"
+    Write-Note "Delete directory : $(if ($DeleteDir) { 'YES' } else { 'no' })"
+
     if ($env:WCM_NONINTERACTIVE -ne '1') {
         # Cache purge prompt
         if (-not $PurgeCache) {
@@ -65,10 +70,10 @@
             $ansPrereq = Read-Host "Uninstall WinFsp and Rclone via Winget? [y/N]"
             if ($ansPrereq -match '^(y|yes)$') { $RemovePrereqs = $true }
         }
-        # Folder delete prompt (only if install folder exists)
+        # Folder delete prompt (only if install folder exists). Default is NO (safe).
         if (-not $DeleteDir -and (Test-Path $InstallDir)) {
-            $ansDir = Read-Host "Delete WinCloudMount directory ($InstallDir)? [Y/n]"
-            if ($ansDir -notmatch '^(n|no)$') { $DeleteDir = $true }
+            $ansDir = Read-Host "Delete WinCloudMount directory ($InstallDir)? [y/N]"
+            if ($ansDir -match '^(y|yes)$') { $DeleteDir = $true }
         }
     }
 
