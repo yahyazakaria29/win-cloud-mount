@@ -503,8 +503,12 @@ function Start-DriveMount {
     Write-Host "-> Launching mount: $($DriveConfig.remote) => $driveLet [$volName]" -ForegroundColor Cyan
     Write-Host "   Cache: $cacheDir (Cap: $cacheSize, MinFree: $cacheMinFree) | Buffer: $bufferSize" -ForegroundColor Gray
 
-    # Retry loop (up to 3 total attempts) to handle post-boot DNS/network settling
+    # Retry loop (up to 3 total attempts) to handle post-boot DNS/network settling.
+    # Each attempt polls the OS for the drive every 2s for up to 30s (WinFsp cold-start
+    # handshake can take 30-35s), so a slow-but-successful mount is not misreported as FAILED.
     $maxAttempts = 3
+    $pollIntervalSeconds     = 2
+    $attemptPollLimitSeconds = 30
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         if ($attempt -gt 1) {
             Write-Host "   -> Network settling... retry attempt $attempt of $maxAttempts for $driveLet in 4s..." -ForegroundColor Yellow
@@ -513,26 +517,32 @@ function Start-DriveMount {
 
         $proc = Start-Process -FilePath $rcloneExe -ArgumentList $argList -WindowStyle Hidden -PassThru
 
-        # Wait briefly and verify the drive actually appears in the OS. A live process alone
+        # Poll the OS for the drive instead of a single one-shot check. A live process alone
         # is NOT proof of a successful mount (WinFsp can leave rclone running without the
         # drive registering in Explorer).
-        Start-Sleep -Seconds 3
-
         $mounted = $false
-        try {
-            $drivePresent   = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name.TrimEnd('\') -eq $driveLet }
-            $psDrivePresent = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
-            if ($drivePresent -or $psDrivePresent) { $mounted = $true }
-        } catch {}
+        $pollStart = Get-Date
+        while (((Get-Date) - $pollStart).TotalSeconds -lt $attemptPollLimitSeconds) {
+            Start-Sleep -Seconds $pollIntervalSeconds
+            if ($proc.HasExited) { break }   # rclone crashed / gave up - stop polling
+            try {
+                $drivePresent   = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name.TrimEnd('\') -eq $driveLet }
+                $psDrivePresent = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
+                if ($drivePresent -or $psDrivePresent) { $mounted = $true; break }
+            } catch {}
+        }
+        $elapsed = [math]::Round(((Get-Date) - $pollStart).TotalSeconds, 1)
 
         if ($mounted) {
             Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon -VolumeLabel $volName -RemoteName $DriveConfig.remote -ConfigName $DriveConfig.name
-            Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id))" -ForegroundColor Green
+            Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id)) after ~${elapsed}s" -ForegroundColor Green
             return
         }
 
-        # Not mounted yet: terminate this attempt's process so the next attempt does not
-        # contend for the same drive letter with a stuck half-mount.
+        # Not mounted within the window: report how long we waited and why, then terminate
+        # this attempt so the next one does not contend for the same drive letter.
+        $why = if ($proc.HasExited) { 'rclone process exited' } else { 'drive not detected (WinFsp handshake timeout)' }
+        Write-Host "   Attempt ${attempt}: not mounted after ~${elapsed}s ($why)" -ForegroundColor Yellow
         if ($proc -and -not $proc.HasExited) {
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
         }
