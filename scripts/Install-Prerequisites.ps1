@@ -39,6 +39,10 @@ function Write-Failure {
     Write-Host "[ERROR] $Message" -ForegroundColor Red
 }
 
+# winget returns 0x8A15002B (-1978335189) when the package is already installed and no
+# upgrade is applicable. Treat that as success; any other non-zero exit code is a failure.
+$AlreadyInstalledExitCode = -1978335189
+
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "       WinCloudMount - Prerequisites Installer            " -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Cyan
@@ -66,6 +70,11 @@ if ($winfspInstalled -and (-not $Force)) {
     Write-Info "Installing WinFsp via winget..."
     try {
         winget install --id WinFsp.WinFsp --exact --silent --accept-package-agreements --accept-source-agreements
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -ne 0 -and $exitCode -ne $AlreadyInstalledExitCode) {
+            Write-Failure ("WinFsp installation failed (winget exit code 0x{0:X8})." -f [uint32]$exitCode)
+            exit 1
+        }
         Write-Success "WinFsp installation completed."
     } catch {
         Write-Failure "Failed to install WinFsp: $_"
@@ -83,6 +92,11 @@ if ($rcloneCmd -and (-not $Force)) {
     Write-Info "Installing Rclone via winget..."
     try {
         winget install --id Rclone.Rclone --exact --silent --accept-package-agreements --accept-source-agreements
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -ne 0 -and $exitCode -ne $AlreadyInstalledExitCode) {
+            Write-Failure ("Rclone installation failed (winget exit code 0x{0:X8})." -f [uint32]$exitCode)
+            exit 1
+        }
         Write-Success "Rclone installation completed."
         
         # Refresh session PATH
@@ -95,6 +109,8 @@ if ($rcloneCmd -and (-not $Force)) {
 
 # 4. Final verification
 Write-Step "Verifying installation integrity..."
+# Refresh PATH so a freshly installed rclone is visible without a terminal restart.
+$env:PATH = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 $verifiedRclone = Get-Command rclone -ErrorAction SilentlyContinue
 $verifiedWinFsp = @($winfspPaths | Where-Object { Test-Path $_ })
 
@@ -105,5 +121,8 @@ if ($verifiedRclone -and $verifiedWinFsp.Count -gt 0) {
     Write-Host " Then run: .\scripts\Mount-Manager.ps1 -Action start     " -ForegroundColor White
     Write-Host "==========================================================" -ForegroundColor Green
 } else {
-    Write-Warning "Prerequisites installed, but terminal restart may be required to refresh PATH environment."
+    Write-Failure "Prerequisite verification failed after installation."
+    if (-not $verifiedRclone) { Write-Failure "  rclone was not found in PATH." }
+    if ($verifiedWinFsp.Count -eq 0) { Write-Failure "  WinFsp install directory was not found." }
+    exit 1
 }
