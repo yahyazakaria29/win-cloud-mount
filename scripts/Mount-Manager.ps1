@@ -369,13 +369,33 @@ public class ShellNotifier {
 }
 
 function Test-GoogleDriveRemote {
-    # Heuristic backend detection: returns $true when a remote's root name looks like a
-    # Google Drive remote (gdrive/googledrive/google). Used to scope --drive-* flags.
-    # NOTE: this is a name heuristic, not a rclone backend query; a precisely-named
-    # non-drive remote (e.g. a WebDAV remote called 'google_photos') would be misclassified.
+    # Detects whether a remote is a Google Drive backend. Authoritative source is
+    # 'rclone config show <root>' (reads the 'type = ...' field). When that query is
+    # unavailable (remote not yet configured, or rclone not on PATH), it falls back to
+    # a name heuristic so a non-Google mount is never blocked by a failed detection.
     param([string]$Remote)
     if (-not $Remote) { return $false }
     $root = if ($Remote -match '^([^:]+:)') { $Matches[1] } else { $Remote }
+    $rootName = $root.TrimEnd(':')
+
+    # Authoritative: ask rclone for the backend type. Only the 'type = ...' line is
+    # retained; the rest of the config output (which may include OAuth tokens) is
+    # discarded by the pipeline and never stored or printed.
+    try {
+        $rcloneCmd = Get-Command rclone -ErrorAction SilentlyContinue
+        if ($rcloneCmd) {
+            $typeLine = & $rcloneCmd.Source config show $rootName 2>$null |
+                Where-Object { $_ -match '^\s*type\s*=' } |
+                Select-Object -First 1
+            if ($typeLine) {
+                $type = ($typeLine -replace '^\s*type\s*=\s*', '').Trim().ToLower()
+                # Definitive: a configured remote with a non-drive type is NOT Google Drive.
+                return ($type -eq 'drive')
+            }
+        }
+    } catch {}
+
+    # Fallback: name heuristic when the authoritative query is unavailable.
     return ($root.ToLower() -match '(gdrive|googledrive|google)')
 }
 
