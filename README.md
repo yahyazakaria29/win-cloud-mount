@@ -84,7 +84,7 @@ Open **PowerShell** (no need for "Run as administrator") and paste:
 irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
 ```
 
-> 🔒 **Release-pinned payload:** the one-liner fetches the small installer script from `main`, but that installer downloads a **pinned release asset** (`v1.1.0`) and verifies its SHA256 before extracting. So the code you actually install is a reviewed, versioned snapshot — not whatever is currently on `main`. See [Release Process](#-release-process-for-maintainers).
+> 🔒 **Release-pinned payload:** the one-liner fetches the small installer script from `main`, but that installer downloads a **pinned release asset** (`v1.1.1`) and verifies its SHA256 before extracting. So the code you actually install is a reviewed, versioned snapshot — not whatever is currently on `main`. See [Release Process](#-release-process-for-maintainers).
 
 What it does:
 1. Downloads WinCloudMount to `%LOCALAPPDATA%\WinCloudMount` (no Git required).

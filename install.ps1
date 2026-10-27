@@ -35,13 +35,13 @@
     $ProgressPreference    = 'SilentlyContinue'   # Invoke-WebRequest is much faster without the progress bar
 
     $Repo       = 'yahyazakaria29/win-cloud-mount'
-    $ReleaseTag = 'v1.1.0'   # Pinned release. Bump on each new release.
+    $ReleaseTag = 'v1.1.1'   # Pinned release. Bump on each new release.
     $InstallDir = if ($env:WCM_INSTALL_DIR) { $env:WCM_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA 'WinCloudMount' }
 
     # SHA256 of the pinned release ASSET (the zip attached to the GitHub Release). This
     # is the byte-stable file the installer downloads and verifies; recompute and bump it
-    # on every release. The value below is the hash of win-cloud-mount-v1.1.0.zip.
-    $ReleaseSha256  = 'CC7F9BF934EFE2D663B2D0A14B1DFB655615CEFD404329FD1BC2EB17E9CE5DEA'
+    # on every release. The value below is the hash of win-cloud-mount-v1.1.1.zip.
+    $ReleaseSha256  = '7D43206FF482424FA99FC315CAF1670F72B4D606AE6B0775652481EB5D09E5BF'
     $ExpectedSha256 = if ($env:WCM_SHA256) { $env:WCM_SHA256 } else { $ReleaseSha256 }
 
     function Write-Step ([string]$m) { Write-Host "`n[STEP] $m" -ForegroundColor Cyan }
