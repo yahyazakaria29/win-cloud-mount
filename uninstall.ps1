@@ -199,27 +199,97 @@ public class ShellRefreshUninstaller {
     # 6. Purge cache if requested
     if ($PurgeCache) {
         Write-Step 'Purging VFS cache files...'
+
+        function Test-UnsafePurgePath {
+            # Returns $true when a path must NEVER be purged (system-critical or user-profile roots).
+            param([string]$Path)
+            if (-not $Path) { return $true }
+
+            $full = $null
+            try { $full = [System.IO.Path]::GetFullPath($Path).TrimEnd('\') } catch { return $true }
+            if (-not $full) { return $true }
+
+            $root = [System.IO.Path]::GetPathRoot($full)
+            if ($root -and $full -eq $root.TrimEnd('\')) { return $true }
+
+            foreach ($d in @(
+                [Environment]::GetFolderPath('Windows'),
+                [Environment]::GetFolderPath('System'),
+                [Environment]::GetFolderPath('ProgramFiles'),
+                [Environment]::GetFolderPath('ProgramFilesX86')
+            )) {
+                if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
+            }
+
+            $profile = [Environment]::GetFolderPath('UserProfile')
+            if ($profile -and $full -eq $profile.TrimEnd('\')) { return $true }
+            $special = @(
+                [Environment]::GetFolderPath('MyDocuments'),
+                [Environment]::GetFolderPath('DesktopDirectory'),
+                [Environment]::GetFolderPath('MyPictures'),
+                [Environment]::GetFolderPath('MyMusic'),
+                [Environment]::GetFolderPath('MyVideos')
+            )
+            if ($profile) {
+                $special += (Join-Path $profile 'Downloads')
+                $special += (Join-Path $profile 'OneDrive')
+                $special += (Join-Path $profile 'Documents')
+                $special += (Join-Path $profile 'Desktop')
+            }
+            foreach ($d in $special) {
+                if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
+            }
+            return $false
+        }
+
+        # Collect cache paths: relative paths resolve against install dir; absolute as-is.
+        $cachePaths = @()
         if (Test-Path $configFile) {
             try {
                 $configs = Get-Content -Raw -Path $configFile | ConvertFrom-Json
                 foreach ($c in $configs) {
                     $cDir = $c.cache_dir
-                    if ($cDir -and -not [IO.Path]::IsPathRooted($cDir)) {
-                        $cDir = Join-Path $InstallDir $cDir
-                    }
-                    if ($cDir -and (Test-Path $cDir)) {
-                        Remove-Item -Path $cDir -Recurse -Force -ErrorAction SilentlyContinue
-                        Write-Note "Purged: $cDir"
+                    if ($cDir) {
+                        if (-not [IO.Path]::IsPathRooted($cDir)) {
+                            $cDir = Join-Path $InstallDir $cDir
+                        }
+                        $cachePaths += $cDir
                     }
                 }
             } catch { }
         }
         $dotCache = Join-Path $InstallDir '.cache'
-        if (Test-Path $dotCache) {
-            Remove-Item -Path $dotCache -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Note "Purged: $dotCache"
+        if (-not ($cachePaths -contains $dotCache)) { $cachePaths += $dotCache }
+
+        foreach ($path in $cachePaths) {
+            if (-not $path -or -not (Test-Path -LiteralPath $path)) { continue }
+
+            $full = [System.IO.Path]::GetFullPath($path)
+
+            if (Test-UnsafePurgePath -Path $full) {
+                Write-Note "SKIPPING unsafe purge path: $full (system/user-critical folder)"
+                continue
+            }
+
+            $installPrefix = $InstallDir.TrimEnd('\') + '\'
+            $outside = -not $full.StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+                       -not ($full -eq $InstallDir.TrimEnd('\'))
+            if ($outside -and $env:WCM_ALLOW_EXTERNAL_CACHE_PURGE -ne '1') {
+                Write-Note "SKIPPING external cache path (outside install dir; set WCM_ALLOW_EXTERNAL_CACHE_PURGE=1 to allow): $full"
+                continue
+            }
+
+            $doPurge = $true
+            if ($env:WCM_NONINTERACTIVE -ne '1') {
+                $ans = Read-Host "Purge cache path: $full ? [y/N]"
+                if ($ans -notmatch '^(y|yes)$') { $doPurge = $false }
+            }
+            if ($doPurge) {
+                Remove-Item -LiteralPath $full -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Note "Purged: $full"
+            }
         }
-        Write-Ok 'Local VFS cache purged.'
+        Write-Ok 'Local VFS cache purge finished.'
     }
 
     # 7. Remove Prerequisites if requested

@@ -164,30 +164,110 @@ Write-Host "  [OK] Registry entries cleaned and Windows Shell notified." -Foregr
 
 # 4. Optional VFS Cache Purge
 Write-Host "`n[4/5] Checking local VFS cache directories..." -ForegroundColor Cyan
+
+function Test-UnsafePurgePath {
+    # Returns $true when a path must NEVER be purged (system-critical or user-profile roots).
+    param([string]$Path)
+    if (-not $Path) { return $true }
+
+    $full = $null
+    try { $full = [System.IO.Path]::GetFullPath($Path).TrimEnd('\') } catch { return $true }
+    if (-not $full) { return $true }
+
+    # Root drive (e.g. 'C:\')
+    $root = [System.IO.Path]::GetPathRoot($full)
+    if ($root -and $full -eq $root.TrimEnd('\')) { return $true }
+
+    # Windows system directories
+    $sysDirs = @(
+        [Environment]::GetFolderPath('Windows'),
+        [Environment]::GetFolderPath('System'),
+        [Environment]::GetFolderPath('ProgramFiles'),
+        [Environment]::GetFolderPath('ProgramFilesX86')
+    )
+    foreach ($d in $sysDirs) {
+        if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
+    }
+
+    # User profile root and standard user folders
+    $profile = [Environment]::GetFolderPath('UserProfile')
+    if ($profile -and $full -eq $profile.TrimEnd('\')) { return $true }
+    $special = @(
+        [Environment]::GetFolderPath('MyDocuments'),
+        [Environment]::GetFolderPath('DesktopDirectory'),
+        [Environment]::GetFolderPath('MyPictures'),
+        [Environment]::GetFolderPath('MyMusic'),
+        [Environment]::GetFolderPath('MyVideos')
+    )
+    if ($profile) {
+        $special += (Join-Path $profile 'Downloads')
+        $special += (Join-Path $profile 'OneDrive')
+        $special += (Join-Path $profile 'Documents')
+        $special += (Join-Path $profile 'Desktop')
+    }
+    foreach ($d in $special) {
+        if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
+    }
+
+    return $false
+}
+
 if ($PurgeCache) {
     Write-Host "  Purging cache as requested via -PurgeCache..." -ForegroundColor Yellow
+
+    # Collect cache paths: relative paths resolve against project root; absolute paths as-is.
+    $cachePaths = @()
     if (Test-Path $ConfigFile) {
         try {
             $configs = Get-Content -Raw -Path $ConfigFile | ConvertFrom-Json
             foreach ($c in $configs) {
                 $cDir = $c.cache_dir
-                if ($cDir -and -not [System.IO.Path]::IsPathRooted($cDir)) {
-                    $cDir = Join-Path $ProjectRoot $cDir
-                }
-                if ($cDir -and (Test-Path $cDir)) {
-                    Write-Host "  Deleting cache folder: $cDir" -ForegroundColor Gray
-                    Remove-Item -Path $cDir -Recurse -Force -ErrorAction SilentlyContinue
+                if ($cDir) {
+                    if (-not [System.IO.Path]::IsPathRooted($cDir)) {
+                        $cDir = Join-Path $ProjectRoot $cDir
+                    }
+                    $cachePaths += $cDir
                 }
             }
         } catch {}
     }
-    # 6. Optional Project .cache Wipe
     $projectDotCache = Join-Path $ProjectRoot ".cache"
-    if (Test-Path $projectDotCache) {
-        Write-Host "  Deleting project cache folder: $projectDotCache" -ForegroundColor Gray
-        Remove-Item -Path $projectDotCache -Recurse -Force -ErrorAction SilentlyContinue
+    if (-not ($cachePaths -contains $projectDotCache)) {
+        $cachePaths += $projectDotCache
     }
-    Write-Host "  [OK] Cache directories purged." -ForegroundColor Green
+
+    foreach ($path in $cachePaths) {
+        if (-not $path -or -not (Test-Path -LiteralPath $path)) { continue }
+
+        $full = [System.IO.Path]::GetFullPath($path)
+
+        # Guardrail 1: never purge system-critical / user-profile roots.
+        if (Test-UnsafePurgePath -Path $full) {
+            Write-Warning "  SKIPPING unsafe purge path: $full (system/user-critical folder)"
+            continue
+        }
+
+        # Guardrail 2: absolute paths outside the project root require explicit consent.
+        $projectRootPrefix = $ProjectRoot.TrimEnd('\') + '\'
+        $outside = -not $full.StartsWith($projectRootPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+                   -not ($full -eq $ProjectRoot.TrimEnd('\'))
+        if ($outside -and $env:WCM_ALLOW_EXTERNAL_CACHE_PURGE -ne '1') {
+            Write-Warning "  SKIPPING external cache path (outside project root; set WCM_ALLOW_EXTERNAL_CACHE_PURGE=1 to allow): $full"
+            continue
+        }
+
+        # Per-path confirmation in interactive mode.
+        $doPurge = $true
+        if ($env:WCM_NONINTERACTIVE -ne '1') {
+            $ans = Read-Host "  Purge cache path: $full ? [y/N]"
+            if ($ans -notmatch '^(y|yes)$') { $doPurge = $false }
+        }
+        if ($doPurge) {
+            Write-Host "  Deleting cache folder: $full" -ForegroundColor Gray
+            Remove-Item -LiteralPath $full -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Write-Host "  [OK] Cache purge finished." -ForegroundColor Green
 } else {
     Write-Host "  Skipping cache purge (use -PurgeCache switch if you wish to wipe local cache)." -ForegroundColor Gray
 }
