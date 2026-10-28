@@ -66,7 +66,7 @@
     try {
         # Older Windows PowerShell 5.1 builds default to TLS 1.0, which GitHub rejects
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-    } catch { }
+    } catch { $null = $_ }
     Write-Ok "Windows $([Environment]::OSVersion.Version) (64-bit), PowerShell $($PSVersionTable.PSVersion)"
 
     # Transparency: report the effective code source and install location BEFORE any download.

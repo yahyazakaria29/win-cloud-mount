@@ -125,7 +125,7 @@
             foreach ($c in $configs) {
                 if ($c.drive_letter) { $letters += $c.drive_letter.ToUpper().TrimEnd(':') }
             }
-        } catch { }
+        } catch { $null = $_ }
     }
     # Verify ownership of E-Z letters before deleting: only remove a letter whose
     # DefaultIcon points into the install directory, mentions WinCloudMount, or
@@ -178,7 +178,7 @@
                     Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
                 }
             }
-    } catch { }
+    } catch { $null = $_ }
 
     # Refresh Windows Shell icon cache
     try {
@@ -194,7 +194,7 @@ public class ShellRefreshUninstaller {
             Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
         }
         [ShellRefreshUninstaller]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
-    } catch { }
+    } catch { $null = $_ }
     Write-Ok 'Explorer drive branding removed and Shell notified.'
 
     # 6. Purge cache if requested
@@ -222,8 +222,8 @@ public class ShellRefreshUninstaller {
                 if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
             }
 
-            $profile = [Environment]::GetFolderPath('UserProfile')
-            if ($profile -and $full -eq $profile.TrimEnd('\')) { return $true }
+            $userProfile = [Environment]::GetFolderPath('UserProfile')
+            if ($userProfile -and $full -eq $userProfile.TrimEnd('\')) { return $true }
             $special = @(
                 [Environment]::GetFolderPath('MyDocuments'),
                 [Environment]::GetFolderPath('DesktopDirectory'),
@@ -231,11 +231,11 @@ public class ShellRefreshUninstaller {
                 [Environment]::GetFolderPath('MyMusic'),
                 [Environment]::GetFolderPath('MyVideos')
             )
-            if ($profile) {
-                $special += (Join-Path $profile 'Downloads')
-                $special += (Join-Path $profile 'OneDrive')
-                $special += (Join-Path $profile 'Documents')
-                $special += (Join-Path $profile 'Desktop')
+            if ($userProfile) {
+                $special += (Join-Path $userProfile 'Downloads')
+                $special += (Join-Path $userProfile 'OneDrive')
+                $special += (Join-Path $userProfile 'Documents')
+                $special += (Join-Path $userProfile 'Desktop')
             }
             foreach ($d in $special) {
                 if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
@@ -257,7 +257,7 @@ public class ShellRefreshUninstaller {
                         $cachePaths += $cDir
                     }
                 }
-            } catch { }
+            } catch { $null = $_ }
         }
         $dotCache = Join-Path $InstallDir '.cache'
         if (-not ($cachePaths -contains $dotCache)) { $cachePaths += $dotCache }

@@ -38,7 +38,7 @@ param (
     [switch]$UseExample
 )
 
-$AppVersion = "1.0.0"
+$AppVersion = "1.1.2"
 $ErrorActionPreference = "Continue"
 
 # Resolve directories
@@ -129,37 +129,99 @@ function Load-DriveConfig {
     }
 }
 
+function ConvertTo-RcloneArg {
+    <#
+    .SYNOPSIS
+        Safely formats a parameter value for Rclone command-line arguments on Windows.
+    .DESCRIPTION
+        Encloses the value in double quotes while escaping any trailing backslashes.
+        On Windows, Win32 CommandLineToArgvW interprets \" as a literal quotation mark,
+        which swallows subsequent arguments if a path ends with a backslash.
+        Doubling trailing backslashes (e.g. D:\Cache\ -> D:\Cache\\) ensures the Win32 parser
+        sees a literal backslash followed by the closing quote delimiter.
+    #>
+    param([string]$Value)
+
+    if ($null -eq $Value) { return '""' }
+    if ($Value -match '["\p{Cc}]') {
+        throw "Argument contains illegal double-quote or control character: $Value"
+    }
+
+    $escaped = $Value -replace '(\\+)$', '$1$1'
+    return "`"$escaped`""
+}
+
+function Get-MountTargetFromCmdline {
+    <#
+    .SYNOPSIS
+        Extracts the remote source and target drive letter from an rclone mount command line.
+    .DESCRIPTION
+        Correctly parses command lines where the remote or subpath contains spaces and is
+        enclosed in double quotes (e.g. "my nas:shared folder" or "gdrive:Kuliah dan Riset").
+    #>
+    param([string]$CommandLine)
+
+    if (-not $CommandLine) { return $null }
+
+    $pattern = '\bmount\s+(?:"(?<remote>[^"]+)"|(?<remote>\S+))\s+"?(?<drive>[A-Za-z]:)"?'
+    if ($CommandLine -match $pattern) {
+        return [PSCustomObject]@{
+            Remote      = $Matches['remote']
+            DriveLetter = $Matches['drive'].ToUpper()
+        }
+    }
+    return $null
+}
+
 function Get-DriveConfigErrors {
-    # Returns an array of human-readable validation errors for a single drive config.
-    # Empty array = valid. Used by both 'test' and 'start' so a misconfigured drive is
-    # rejected with a field-specific message before it ever reaches `rclone mount`.
+    # Validates a single drive configuration object from drives.json. Returns a list of
+    # error strings (empty list when valid). Pure function: performs no I/O, creates no
+    # side effects, and is safe to call from unit tests.
     param ($DriveConfig)
 
     $errors = @()
 
+    $getProp = {
+        param($obj, [string]$name)
+        if ($obj -and $obj.PSObject.Properties[$name]) {
+            return $obj.$name
+        }
+        return $null
+    }
+
+    $remote       = & $getProp $DriveConfig 'remote'
+    $driveLet     = & $getProp $DriveConfig 'drive_letter'
+    $volName      = & $getProp $DriveConfig 'volume_name'
+    $cacheDir     = & $getProp $DriveConfig 'cache_dir'
+
     # Required fields
-    if (-not $DriveConfig.remote)       { $errors += "missing required field 'remote'" }
-    if (-not $DriveConfig.drive_letter) { $errors += "missing required field 'drive_letter'" }
-    if (-not $DriveConfig.volume_name)  { $errors += "missing required field 'volume_name'" }
+    if (-not $remote)   { $errors += "missing required field 'remote'" }
+    if (-not $driveLet) { $errors += "missing required field 'drive_letter'" }
+    if (-not $volName)  { $errors += "missing required field 'volume_name'" }
 
     # drive_letter must be a single letter plus colon (e.g. 'E:')
-    if ($DriveConfig.drive_letter -and $DriveConfig.drive_letter -notmatch '^[A-Za-z]:$') {
-        $errors += "drive_letter '$($DriveConfig.drive_letter)' must match '^[A-Za-z]:$'"
+    if ($driveLet -and $driveLet -notmatch '^[A-Za-z]:$') {
+        $errors += "drive_letter '$driveLet' must match '^[A-Za-z]:$'"
     }
 
     # Injection safety: values interpolated into the rclone command line must never
     # contain a double-quote or control character, or they could break out of the
     # argument quoting and inject a new rclone flag (e.g. --config, --log-file).
     foreach ($field in @('remote', 'volume_name', 'cache_dir', 'name')) {
-        $val = $DriveConfig.$field
+        $val = & $getProp $DriveConfig $field
         if ($val -and ($val -match '["\p{Cc}]')) {
             $errors += "$field contains an illegal double-quote or control character"
         }
     }
 
+    # cache_dir must not end with a trailing slash or backslash
+    if ($cacheDir -and ($cacheDir -match '[\\/]$')) {
+        $errors += "cache_dir '$cacheDir' must not end with a trailing slash or backslash; use paths like 'D:\Cache' or '.cache\name'"
+    }
+
     # Size fields, when set, must be <number><unit> with unit M/G/T/P (case-insensitive).
     foreach ($field in @('cache_size', 'cache_min_free_space', 'buffer_size', 'read_chunk_size', 'read_chunk_limit', 'upload_chunk_size')) {
-        $val = $DriveConfig.$field
+        $val = & $getProp $DriveConfig $field
         if ($val -and ($val -notmatch '^[0-9]+[MGTPmgtp]$')) {
             $errors += "$field '$val' must match '^[0-9]+[MGTPmgtp]$'"
         }
@@ -177,7 +239,7 @@ function Get-ConfiguredDriveLetters {
         foreach ($c in @($cfg)) {
             if ($c.drive_letter) { $letters += $c.drive_letter.ToUpper().TrimEnd(':') }
         }
-    } catch {}
+    } catch { $null = $_ }
     $letters
 }
 
@@ -220,7 +282,7 @@ function Clear-StaleNetworkMountPoints {
                 Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
-    } catch {}
+    } catch { $null = $_ }
 }
 
 function Wait-ForNetworkConnection {
@@ -238,7 +300,7 @@ function Wait-ForNetworkConnection {
                     Write-Host "[OK] Network is online. DNS resolved '$hostName' successfully." -ForegroundColor Green
                     return $true
                 }
-            } catch {}
+            } catch { $null = $_ }
         }
         Start-Sleep -Seconds 2
     }
@@ -333,14 +395,14 @@ function Set-DriveIcon {
         try {
             if (-not (Test-Path $classesKey)) { New-Item -Path $classesKey -Force | Out-Null }
             Set-ItemProperty -Path $classesKey -Name "(Default)" -Value $resolvedIcon -Force
-        } catch {}
+        } catch { $null = $_ }
 
         if ($VolumeLabel) {
             $labelKey = "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\$letterOnly\DefaultLabel"
             try {
                 if (-not (Test-Path $labelKey)) { New-Item -Path $labelKey -Force | Out-Null }
                 Set-ItemProperty -Path $labelKey -Name "(Default)" -Value $VolumeLabel -Force
-            } catch {}
+            } catch { $null = $_ }
         }
 
         # Method 2: Explorer DriveIcons (Legacy fallback)
@@ -348,7 +410,7 @@ function Set-DriveIcon {
         try {
             if (-not (Test-Path $explorerKey)) { New-Item -Path $explorerKey -Force | Out-Null }
             Set-ItemProperty -Path $explorerKey -Name "(Default)" -Value $resolvedIcon -Force
-        } catch {}
+        } catch { $null = $_ }
 
         # Broadcast Shell change notification
         try {
@@ -364,7 +426,7 @@ public class ShellNotifier {
                 Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
             }
             [ShellNotifier]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
-        } catch {}
+        } catch { $null = $_ }
     }
 }
 
@@ -384,7 +446,7 @@ function Test-GoogleDriveRemote {
     try {
         $rcloneCmd = Get-Command rclone -ErrorAction SilentlyContinue
         if ($rcloneCmd) {
-            $typeLine = & $rcloneCmd.Source config show $rootName 2>$null |
+            $typeLine = & $rcloneCmd.Source --ask-password=false config show $rootName 2>$null |
                 Where-Object { $_ -match '^\s*type\s*=' } |
                 Select-Object -First 1
             if ($typeLine) {
@@ -393,7 +455,7 @@ function Test-GoogleDriveRemote {
                 return ($type -eq 'drive')
             }
         }
-    } catch {}
+    } catch { $null = $_ }
 
     # Fallback: name heuristic when the authoritative query is unavailable.
     return ($root.ToLower() -match '(gdrive|googledrive|google)')
@@ -407,7 +469,7 @@ function Start-DriveMount {
     if ($cfgErrors.Count -gt 0) {
         Write-Error "Drive '$($DriveConfig.name)' has invalid configuration:"
         foreach ($e in $cfgErrors) { Write-Error "  - $e" }
-        return
+        return $false
     }
 
     $driveLet = $DriveConfig.drive_letter.ToUpper()
@@ -423,11 +485,11 @@ function Start-DriveMount {
     $existingVolume  = $null
     try {
         $existingVolume = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name.TrimEnd('\') -eq $driveLet }
-    } catch {}
+    } catch { $null = $_ }
     if ($existingPsDrive -or $existingVolume) {
         $desc = if ($existingPsDrive) { "$($existingPsDrive.Provider.Name) [$($existingPsDrive.Description)]" } else { "an existing volume" }
         Write-Warning "Drive $driveLet is already in use by $desc. Skipping..."
-        return
+        return $true
     }
 
     # Prepare Cache Directory
@@ -452,7 +514,7 @@ function Start-DriveMount {
                 Write-Warning "Host disk ($cacheDriveRoot) has only $availGB GB free space remaining! Ensure sufficient space for local VFS caching."
             }
         }
-    } catch {}
+    } catch { $null = $_ }
 
     # Defaults for resource-efficient tuning
     $cacheSize      = if ($DriveConfig.cache_size) { $DriveConfig.cache_size } else { "20G" }
@@ -463,52 +525,67 @@ function Start-DriveMount {
     $volName        = if ($DriveConfig.volume_name) { $DriveConfig.volume_name } else { "CloudDrive - $driveLet" }
     $logFile        = Join-Path $LogDir "$($DriveConfig.name)_mount.log"
 
+    # Rotate log file if it exceeds 5 MB to prevent unbounded log growth.
+    # Keep at most one archive file (.1) per drive.
+    if (Test-Path -LiteralPath $logFile) {
+        try {
+            $logItem = Get-Item -LiteralPath $logFile -ErrorAction SilentlyContinue
+            if ($logItem -and $logItem.Length -gt 5MB) {
+                $oldLog = "$logFile.1"
+                if (Test-Path -LiteralPath $oldLog) {
+                    Remove-Item -LiteralPath $oldLog -Force -ErrorAction SilentlyContinue
+                }
+                Move-Item -LiteralPath $logFile -Destination $oldLog -Force -ErrorAction SilentlyContinue
+                Write-Host "   Rotated log file > 5 MB to $(Split-Path -Leaf $oldLog)" -ForegroundColor Gray
+            }
+        } catch { $null = $_ }
+    }
+
+    # Defensive TrimEnd on cache_dir (trailing slashes are rejected by Get-DriveConfigErrors;
+    # stripped here as defense-in-depth before command line construction).
+    $safeCacheDir = if ($cacheDir) { $cacheDir.TrimEnd('\', '/') } else { $null }
+
     $uploadChunk    = if ($DriveConfig.upload_chunk_size) { $DriveConfig.upload_chunk_size } else { "32M" }
 
     $rcloneCmd = Get-Command rclone -ErrorAction SilentlyContinue
     $rcloneExe = if ($rcloneCmd) { $rcloneCmd.Source } else { "rclone.exe" }
 
-    # Argument passing strategy (verified on this machine, PowerShell 5.1 + 7.6):
-    #   Start-Process -ArgumentList does NOT re-quote raw array elements that contain
-    #   whitespace; a raw array is joined with plain spaces, so "C:\Users\Some One\cache"
-    #   would split into multiple tokens. Elements that themselves embed the surrounding
-    #   double quotes, however, are preserved intact when the array is passed directly.
-    #   We therefore keep each token pre-quoted where it contains whitespace (remote,
-    #   drive letter, volume name, cache dir, log file) and pass the array straight to
-    #   -ArgumentList WITHOUT a "-join ' '". Combined with Get-DriveConfigErrors (which
-    #   rejects embedded double-quotes/control chars), the quoting cannot be escaped.
+    # Argument passing strategy:
+    #   ConvertTo-RcloneArg ensures each token containing whitespace or special characters
+    #   is safely quoted and trailing backslashes are doubled to prevent Win32 CommandLineToArgvW
+    #   quote-escaping traps.
     $argList = @(
         "mount",
-        "`"$($DriveConfig.remote)`"",
-        "`"$driveLet`"",
-        "--volname `"$volName`"",
-        "--vfs-cache-mode full",
-        "--vfs-cache-max-size $cacheSize",
-        "--vfs-cache-min-free-space $cacheMinFree",
-        "--vfs-cache-max-age 24h",
-        "--vfs-cache-poll-interval 1m",
-        "--cache-dir `"$cacheDir`"",
-        "--buffer-size $bufferSize",
-        "--vfs-read-chunk-size $readChunkSize",
-        "--vfs-read-chunk-size-limit $readChunkLimit",
+        (ConvertTo-RcloneArg $DriveConfig.remote),
+        (ConvertTo-RcloneArg $driveLet),
+        "--volname", (ConvertTo-RcloneArg $volName),
+        "--vfs-cache-mode", "full",
+        "--vfs-cache-max-size", $cacheSize,
+        "--vfs-cache-min-free-space", $cacheMinFree,
+        "--vfs-cache-max-age", "24h",
+        "--vfs-cache-poll-interval", "1m",
+        "--cache-dir", (ConvertTo-RcloneArg $safeCacheDir),
+        "--buffer-size", $bufferSize,
+        "--vfs-read-chunk-size", $readChunkSize,
+        "--vfs-read-chunk-size-limit", $readChunkLimit,
         "--vfs-fast-fingerprint",
-        "--dir-cache-time 24h",
-        "--attr-timeout 24h",
-        "--poll-interval 1m",
+        "--dir-cache-time", "24h",
+        "--attr-timeout", "24h",
+        "--poll-interval", "1m",
         "--links",
         "--no-modtime",
-        "--user-agent `"WinCloudMount/1.0.0 (Windows)`"",
-        "--log-file `"$logFile`"",
-        "--log-level NOTICE"
+        "--user-agent", (ConvertTo-RcloneArg "WinCloudMount/$AppVersion (Windows)"),
+        "--log-file", (ConvertTo-RcloneArg $logFile),
+        "--log-level", "NOTICE",
+        "--ask-password=false"
     )
 
     # Google Drive-specific backend flags are added ONLY when the remote is detected as a
-    # Google Drive remote (by name). These flags are no-ops on S3/SFTP/WebDAV/NAS backends,
-    # so applying them globally was misleading.
+    # Google Drive remote (by type/name). These flags are no-ops on S3/SFTP/WebDAV/NAS backends.
     if (Test-GoogleDriveRemote -Remote $DriveConfig.remote) {
-        $argList += "--drive-chunk-size $uploadChunk"
-        $argList += "--drive-pacer-min-sleep 10ms"
-        $argList += "--drive-pacer-burst 200"
+        $argList += @("--drive-chunk-size", $uploadChunk)
+        $argList += @("--drive-pacer-min-sleep", "10ms")
+        $argList += @("--drive-pacer-burst", "200")
     }
 
     if ($DriveConfig.network_mode -eq $true) {
@@ -524,11 +601,11 @@ function Start-DriveMount {
     Write-Host "   Cache: $cacheDir (Cap: $cacheSize, MinFree: $cacheMinFree) | Buffer: $bufferSize" -ForegroundColor Gray
 
     # Retry loop (up to 3 total attempts) to handle post-boot DNS/network settling.
-    # Each attempt polls the OS for the drive every 2s for up to 30s (WinFsp cold-start
-    # handshake can take 30-35s), so a slow-but-successful mount is not misreported as FAILED.
+    # Each attempt polls the OS for the drive every 2s for up to 45s (WinFsp cold-start
+    # handshake typically takes 30-35s), so a slow-but-successful mount is not misreported as FAILED.
     $maxAttempts = 3
     $pollIntervalSeconds     = 2
-    $attemptPollLimitSeconds = 30
+    $attemptPollLimitSeconds = 45
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         if ($attempt -gt 1) {
             Write-Host "   -> Network settling... retry attempt $attempt of $maxAttempts for $driveLet in 4s..." -ForegroundColor Yellow
@@ -545,26 +622,26 @@ function Start-DriveMount {
         while (((Get-Date) - $pollStart).TotalSeconds -lt $attemptPollLimitSeconds) {
             Start-Sleep -Seconds $pollIntervalSeconds
             # Refresh() is required: Process.HasExited is cached, so without it an early
-            # rclone exit (e.g. bad remote) would not be seen until the 30s window expires.
-            try { $proc.Refresh() } catch {}
+            # rclone exit (e.g. bad remote) would not be seen until the 45s window expires.
+            try { $proc.Refresh() } catch { $null = $_ }
             if ($proc.HasExited) { break }   # rclone crashed / gave up - stop polling
             try {
                 $drivePresent   = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name.TrimEnd('\') -eq $driveLet }
                 $psDrivePresent = Get-PSDrive -Name $letterOnly -ErrorAction SilentlyContinue
                 if ($drivePresent -or $psDrivePresent) { $mounted = $true; break }
-            } catch {}
+            } catch { $null = $_ }
         }
         $elapsed = [math]::Round(((Get-Date) - $pollStart).TotalSeconds, 1)
 
         if ($mounted) {
             Set-DriveIcon -DriveLetter $DriveConfig.drive_letter -IconPath $DriveConfig.icon -VolumeLabel $volName -RemoteName $DriveConfig.remote -ConfigName $DriveConfig.name
             Write-Host "   [SUCCESS] Mounted $driveLet (PID: $($proc.Id)) after ~${elapsed}s" -ForegroundColor Green
-            return
+            return $true
         }
 
         # Not mounted within the window: report how long we waited and why, then terminate
         # this attempt so the next one does not contend for the same drive letter.
-        try { $proc.Refresh() } catch {}
+        try { $proc.Refresh() } catch { $null = $_ }
         $why = if ($proc.HasExited) { 'rclone process exited' } else { 'drive not detected (WinFsp handshake timeout)' }
         Write-Host "   Attempt ${attempt}: not mounted after ~${elapsed}s ($why)" -ForegroundColor Yellow
         if ($proc -and -not $proc.HasExited) {
@@ -578,8 +655,9 @@ function Start-DriveMount {
         try {
             Write-Host "   Last log lines ($logFile):" -ForegroundColor Yellow
             Get-Content -Path $logFile -Tail 10 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
-        } catch {}
+        } catch { $null = $_ }
     }
+    return $false
 }
 
 function Stop-DriveMount {
@@ -615,8 +693,9 @@ function Stop-DriveMount {
         $matched = $false
         $driveInCmd = $null
 
-        if ($cmdLine -match 'mount\s+"?[^"\s]+"?\s+"?([A-Za-z]:)"?') {
-            $driveInCmd = $Matches[1].ToUpper()
+        $targetInfo = Get-MountTargetFromCmdline -CommandLine $cmdLine
+        if ($targetInfo) {
+            $driveInCmd = $targetInfo.DriveLetter
         }
 
         if ($TargetDrive) {
@@ -644,7 +723,7 @@ function Stop-DriveMount {
                             Write-Host "   Allowing 3 seconds grace period before terminating (any remaining files will resume uploading on next mount)..." -ForegroundColor Yellow
                             Start-Sleep -Seconds 3
                         }
-                    } catch {}
+                    } catch { $null = $_ }
                 }
             }
 
@@ -687,8 +766,9 @@ function Show-Status {
             $cim = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)" -ErrorAction SilentlyContinue
             $cmd = if ($cim) { $cim.CommandLine } else { "" }
             $mountTarget = "Unknown"
-            if ($cmd -match 'mount\s+"?([^"\s]+)"?\s+"?([A-Za-z]:)"?') {
-                $mountTarget = "$($Matches[1]) -> $($Matches[2])"
+            $targetInfo = Get-MountTargetFromCmdline -CommandLine $cmd
+            if ($targetInfo) {
+                $mountTarget = "$($targetInfo.Remote) -> $($targetInfo.DriveLetter)"
             }
 
             [PSCustomObject]@{
@@ -718,7 +798,7 @@ function Show-Status {
                     $usedGB  = [math]::Round($totalGB - $freeGB, 2)
                     $label   = $d.VolumeLabel
                 }
-            } catch {}
+            } catch { $null = $_ }
 
             [PSCustomObject]@{
                 Drive        = $d.Name.TrimEnd('\')
@@ -762,7 +842,7 @@ function Test-Config {
         # remote like 'home_nas:/mnt/storage' must be compared by its root, not the full path.
         $remoteRoot = if ($d.remote -and $d.remote -match '^([^:]+:)') { $Matches[1] } elseif ($d.remote) { "$($d.remote):" } else { '' }
         if ($remoteRoot) {
-            $checkRemote = & rclone listremotes 2>$null | Where-Object { $_ -eq $remoteRoot }
+            $checkRemote = & rclone --ask-password=false listremotes 2>$null | Where-Object { $_ -eq $remoteRoot }
             if ($checkRemote) {
                 Write-Host "  Remote Check: [FOUND] '$remoteRoot' configured in rclone.conf" -ForegroundColor Green
             } else {
@@ -782,17 +862,25 @@ switch ($Action) {
         Write-MountHeader "Starting Configured Virtual Drives"
         $null = Wait-ForNetworkConnection
         $configs = @(Load-DriveConfig)
+        $hasFailure = $false
         foreach ($c in $configs) {
             if ($DriveLetter) {
                 $targetNorm = $DriveLetter.ToUpper().TrimEnd(':') + ":"
                 if ($c.drive_letter.ToUpper() -eq $targetNorm) {
-                    Start-DriveMount -DriveConfig $c
+                    $res = Start-DriveMount -DriveConfig $c
+                    if ($res -eq $false) { $hasFailure = $true }
                 }
             } else {
-                Start-DriveMount -DriveConfig $c
+                $res = Start-DriveMount -DriveConfig $c
+                if ($res -eq $false) { $hasFailure = $true }
             }
         }
-        Write-Host "`nAll mounts initiated. Run '.\Mount-Manager.ps1 -Action status' to inspect." -ForegroundColor Green
+        if ($hasFailure) {
+            Write-Host "`n[ERROR] One or more drive mount(s) failed. Run '.\Mount-Manager.ps1 -Action status' to inspect." -ForegroundColor Red
+            exit 1
+        } else {
+            Write-Host "`nAll mounts initiated. Run '.\Mount-Manager.ps1 -Action status' to inspect." -ForegroundColor Green
+        }
     }
 
     "stop" {
