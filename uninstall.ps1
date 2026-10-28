@@ -125,7 +125,7 @@
             foreach ($c in $configs) {
                 if ($c.drive_letter) { $letters += $c.drive_letter.ToUpper().TrimEnd(':') }
             }
-        } catch { }
+        } catch { $null = $_ }
     }
     # Verify ownership of E-Z letters before deleting: only remove a letter whose
     # DefaultIcon points into the install directory, mentions WinCloudMount, or
@@ -178,7 +178,7 @@
                     Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
                 }
             }
-    } catch { }
+    } catch { $null = $_ }
 
     # Refresh Windows Shell icon cache
     try {
@@ -194,7 +194,7 @@ public class ShellRefreshUninstaller {
             Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
         }
         [ShellRefreshUninstaller]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
-    } catch { }
+    } catch { $null = $_ }
     Write-Ok 'Explorer drive branding removed and Shell notified.'
 
     # 6. Purge cache if requested
@@ -222,8 +222,8 @@ public class ShellRefreshUninstaller {
                 if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
             }
 
-            $profile = [Environment]::GetFolderPath('UserProfile')
-            if ($profile -and $full -eq $profile.TrimEnd('\')) { return $true }
+            $userProfile = [Environment]::GetFolderPath('UserProfile')
+            if ($userProfile -and $full -eq $userProfile.TrimEnd('\')) { return $true }
             $special = @(
                 [Environment]::GetFolderPath('MyDocuments'),
                 [Environment]::GetFolderPath('DesktopDirectory'),
@@ -231,11 +231,11 @@ public class ShellRefreshUninstaller {
                 [Environment]::GetFolderPath('MyMusic'),
                 [Environment]::GetFolderPath('MyVideos')
             )
-            if ($profile) {
-                $special += (Join-Path $profile 'Downloads')
-                $special += (Join-Path $profile 'OneDrive')
-                $special += (Join-Path $profile 'Documents')
-                $special += (Join-Path $profile 'Desktop')
+            if ($userProfile) {
+                $special += (Join-Path $userProfile 'Downloads')
+                $special += (Join-Path $userProfile 'OneDrive')
+                $special += (Join-Path $userProfile 'Documents')
+                $special += (Join-Path $userProfile 'Desktop')
             }
             foreach ($d in $special) {
                 if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
@@ -257,7 +257,7 @@ public class ShellRefreshUninstaller {
                         $cachePaths += $cDir
                     }
                 }
-            } catch { }
+            } catch { $null = $_ }
         }
         $dotCache = Join-Path $InstallDir '.cache'
         if (-not ($cachePaths -contains $dotCache)) { $cachePaths += $dotCache }
@@ -293,12 +293,72 @@ public class ShellRefreshUninstaller {
         Write-Ok 'Local VFS cache purge finished.'
     }
 
+    function Get-PrerequisiteRemovalPlan {
+        param ([string]$MarkerPath)
+
+        $plan = [PSCustomObject]@{
+            HasMarker       = $false
+            UninstallWinFsp = $false
+            UninstallRclone = $false
+            InstalledByWcm  = @()
+            WarningMessage  = $null
+        }
+
+        if (-not $MarkerPath -or -not (Test-Path -LiteralPath $MarkerPath)) {
+            $plan.WarningMessage = "Prerequisites marker (.prerequisites.json) not found at $MarkerPath. Assuming all tools were pre-existing. Retaining WinFsp and Rclone."
+            return $plan
+        }
+
+        $plan.HasMarker = $true
+        try {
+            $raw = Get-Content -LiteralPath $MarkerPath -Raw -ErrorAction Stop
+            $data = $raw | ConvertFrom-Json -ErrorAction Stop
+            if ($data -and $data.installed_by_wcm) {
+                $installed = @($data.installed_by_wcm | ForEach-Object { "$_".ToLower().Trim() })
+                $plan.InstalledByWcm = $installed
+                if ($installed -contains 'winfsp') { $plan.UninstallWinFsp = $true }
+                if ($installed -contains 'rclone') { $plan.UninstallRclone = $true }
+            }
+        } catch {
+            $plan.WarningMessage = 'Could not parse prerequisites marker (.prerequisites.json). Retaining WinFsp and Rclone as a safeguard.'
+            return $plan
+        }
+
+        if (-not $plan.UninstallWinFsp -and -not $plan.UninstallRclone) {
+            $plan.WarningMessage = "No prerequisites were recorded as installed by WinCloudMount in $MarkerPath. Retaining WinFsp and Rclone."
+        }
+
+        return $plan
+    }
+
     # 7. Remove Prerequisites if requested
     if ($RemovePrereqs) {
-        Write-Step 'Uninstalling WinFsp and Rclone via Winget...'
-        winget uninstall --id rclone.rclone --silent --accept-source-agreements
-        winget uninstall --id WinFsp.WinFsp --silent --accept-source-agreements
-        Write-Ok 'Prerequisites uninstalled.'
+        $markerFile = Join-Path $InstallDir '.prerequisites.json'
+        $plan = Get-PrerequisiteRemovalPlan -MarkerPath $markerFile
+
+        if ($plan.WarningMessage) {
+            Write-Warning $plan.WarningMessage
+        }
+
+        if ($plan.UninstallRclone) {
+            Write-Step 'Uninstalling Rclone (installed by WinCloudMount) via Winget...'
+            winget uninstall --id rclone.rclone --silent --accept-source-agreements
+            Write-Ok 'Rclone uninstalled.'
+        } else {
+            Write-Note 'Retaining Rclone (pre-existing or not installed by WinCloudMount).'
+        }
+
+        if ($plan.UninstallWinFsp) {
+            Write-Step 'Uninstalling WinFsp (installed by WinCloudMount) via Winget...'
+            winget uninstall --id WinFsp.WinFsp --silent --accept-source-agreements
+            Write-Ok 'WinFsp uninstalled.'
+        } else {
+            Write-Note 'Retaining WinFsp (pre-existing or not installed by WinCloudMount).'
+        }
+
+        if (Test-Path -LiteralPath $markerFile) {
+            Remove-Item -LiteralPath $markerFile -Force -ErrorAction SilentlyContinue
+        }
     }
 
     # 8. Delete installation directory if requested

@@ -87,7 +87,7 @@ if (Test-Path $ConfigFile) {
                 $driveLetters += $c.drive_letter.ToUpper().TrimEnd(':')
             }
         }
-    } catch {}
+    } catch { $null = $_ }
 }
 
 # Verify ownership of any E-Z letter carrying a drive-icon key BEFORE adding it to the
@@ -144,7 +144,7 @@ try {
                 Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
-} catch {}
+} catch { $null = $_ }
 
 # Broadcast Shell refresh
 try {
@@ -160,7 +160,7 @@ public class UnloadShellNotifier {
         Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
     }
     [UnloadShellNotifier]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
-} catch {}
+} catch { $null = $_ }
 Write-Host "  [OK] Registry entries cleaned and Windows Shell notified." -ForegroundColor Green
 
 # 4. Optional VFS Cache Purge
@@ -191,8 +191,8 @@ function Test-UnsafePurgePath {
     }
 
     # User profile root and standard user folders
-    $profile = [Environment]::GetFolderPath('UserProfile')
-    if ($profile -and $full -eq $profile.TrimEnd('\')) { return $true }
+    $userProfile = [Environment]::GetFolderPath('UserProfile')
+    if ($userProfile -and $full -eq $userProfile.TrimEnd('\')) { return $true }
     $special = @(
         [Environment]::GetFolderPath('MyDocuments'),
         [Environment]::GetFolderPath('DesktopDirectory'),
@@ -200,11 +200,11 @@ function Test-UnsafePurgePath {
         [Environment]::GetFolderPath('MyMusic'),
         [Environment]::GetFolderPath('MyVideos')
     )
-    if ($profile) {
-        $special += (Join-Path $profile 'Downloads')
-        $special += (Join-Path $profile 'OneDrive')
-        $special += (Join-Path $profile 'Documents')
-        $special += (Join-Path $profile 'Desktop')
+    if ($userProfile) {
+        $special += (Join-Path $userProfile 'Downloads')
+        $special += (Join-Path $userProfile 'OneDrive')
+        $special += (Join-Path $userProfile 'Documents')
+        $special += (Join-Path $userProfile 'Desktop')
     }
     foreach ($d in $special) {
         if ($d -and $full -eq $d.TrimEnd('\')) { return $true }
@@ -230,7 +230,7 @@ if ($PurgeCache) {
                     $cachePaths += $cDir
                 }
             }
-        } catch {}
+        } catch { $null = $_ }
     }
     $projectDotCache = Join-Path $ProjectRoot ".cache"
     if (-not ($cachePaths -contains $projectDotCache)) {
@@ -273,13 +273,73 @@ if ($PurgeCache) {
     Write-Host "  Skipping cache purge (use -PurgeCache switch if you wish to wipe local cache)." -ForegroundColor Gray
 }
 
+function Get-PrerequisiteRemovalPlan {
+    param ([string]$MarkerPath)
+
+    $plan = [PSCustomObject]@{
+        HasMarker       = $false
+        UninstallWinFsp = $false
+        UninstallRclone = $false
+        InstalledByWcm  = @()
+        WarningMessage  = $null
+    }
+
+    if (-not $MarkerPath -or -not (Test-Path -LiteralPath $MarkerPath)) {
+        $plan.WarningMessage = "Prerequisites marker (.prerequisites.json) not found at $MarkerPath. Assuming all tools were pre-existing. Retaining WinFsp and Rclone."
+        return $plan
+    }
+
+    $plan.HasMarker = $true
+    try {
+        $raw = Get-Content -LiteralPath $MarkerPath -Raw -ErrorAction Stop
+        $data = $raw | ConvertFrom-Json -ErrorAction Stop
+        if ($data -and $data.installed_by_wcm) {
+            $installed = @($data.installed_by_wcm | ForEach-Object { "$_".ToLower().Trim() })
+            $plan.InstalledByWcm = $installed
+            if ($installed -contains "winfsp") { $plan.UninstallWinFsp = $true }
+            if ($installed -contains "rclone") { $plan.UninstallRclone = $true }
+        }
+    } catch {
+        $plan.WarningMessage = "Could not parse prerequisites marker (.prerequisites.json). Retaining WinFsp and Rclone as a safeguard."
+        return $plan
+    }
+
+    if (-not $plan.UninstallWinFsp -and -not $plan.UninstallRclone) {
+        $plan.WarningMessage = "No prerequisites were recorded as installed by WinCloudMount in $MarkerPath. Retaining WinFsp and Rclone."
+    }
+
+    return $plan
+}
+
 # 5. Optional Prerequisites Removal
 Write-Host "`n[5/5] Checking prerequisites (WinFsp & Rclone)..." -ForegroundColor Cyan
 if ($RemovePrerequisites) {
-    Write-Host "  Uninstalling Rclone and WinFsp via Winget..." -ForegroundColor Yellow
-    winget uninstall --id rclone.rclone --silent --accept-source-agreements
-    winget uninstall --id WinFsp.WinFsp --silent --accept-source-agreements
-    Write-Host "  [OK] Prerequisites uninstalled." -ForegroundColor Green
+    $markerFile = Join-Path $ProjectRoot ".prerequisites.json"
+    $plan = Get-PrerequisiteRemovalPlan -MarkerPath $markerFile
+
+    if ($plan.WarningMessage) {
+        Write-Warning $plan.WarningMessage
+    }
+
+    if ($plan.UninstallRclone) {
+        Write-Host "  Uninstalling Rclone (installed by WinCloudMount) via Winget..." -ForegroundColor Yellow
+        winget uninstall --id rclone.rclone --silent --accept-source-agreements
+        Write-Host "  [OK] Rclone uninstalled." -ForegroundColor Green
+    } else {
+        Write-Host "  Retaining Rclone (pre-existing or not installed by WinCloudMount)." -ForegroundColor Gray
+    }
+
+    if ($plan.UninstallWinFsp) {
+        Write-Host "  Uninstalling WinFsp (installed by WinCloudMount) via Winget..." -ForegroundColor Yellow
+        winget uninstall --id WinFsp.WinFsp --silent --accept-source-agreements
+        Write-Host "  [OK] WinFsp uninstalled." -ForegroundColor Green
+    } else {
+        Write-Host "  Retaining WinFsp (pre-existing or not installed by WinCloudMount)." -ForegroundColor Gray
+    }
+
+    if (Test-Path -LiteralPath $markerFile) {
+        Remove-Item -LiteralPath $markerFile -Force -ErrorAction SilentlyContinue
+    }
 } else {
     Write-Host "  Retaining WinFsp and Rclone binaries (use -RemovePrerequisites switch to uninstall)." -ForegroundColor Gray
 }

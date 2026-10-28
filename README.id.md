@@ -46,6 +46,14 @@ Software komersial seperti **Air Live Drive** atau **RaiDrive** membatasi fitur 
 
 ---
 
+## 🛠️ Arsitektur (Architecture)
+
+> [!NOTE]
+> **Bagian ini belum diterjemahkan ke Bahasa Indonesia.**  
+> Silakan merujuk ke dokumentasi lengkap arsitektur dan diagram alir dalam bahasa Inggris di [README.md - Architecture](README.md#-architecture).
+
+---
+
 ## 🚀 Panduan Cepat (Kurang dari 5 Menit)
 
 ### 1. Instalasi (pilih salah satu)
@@ -141,6 +149,14 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Setup-Autostart.ps1 -Acti
 
 ---
 
+## ⚙️ VFS Performance Tuning
+
+> [!NOTE]
+> **Bagian ini belum diterjemahkan ke Bahasa Indonesia.**  
+> Silakan merujuk ke panduan tuning performa cache VFS dalam bahasa Inggris di [README.md - VFS Performance Tuning](README.md#%EF%B8%8F-vfs-performance-tuning).
+
+---
+
 ## 🎨 Bundel Icon Resmi & Auto-Detection
 WinCloudMount menyertakan bundel file `.ico` resmi multi-resolusi (16x16 hingga 256x256 px):
 * **Google Drive / Google Workspace** (`assets/icons/googledrive.ico`)
@@ -156,6 +172,14 @@ WinCloudMount menyertakan bundel file `.ico` resmi multi-resolusi (16x16 hingga 
 *Panduan lengkap langkah demi langkah untuk setiap cloud dan Home Server dapat dilihat di [docs/PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md).*
 
 *Jika Anda mengosongkan parameter `"icon"`, sistem akan otomatis mendeteksi nama provider dan memasang logo yang tepat.*
+
+---
+
+## 🔍 Referensi CLI (`Mount-Manager.ps1`)
+
+> [!NOTE]
+> **Bagian ini belum diterjemahkan ke Bahasa Indonesia.**  
+> Silakan merujuk ke tabel referensi perintah dan opsi CLI dalam bahasa Inggris di [README.md - CLI Reference](README.md#-cli-reference-mount-managerps1).
 
 ---
 
@@ -231,6 +255,14 @@ One-liner memverifikasi SHA256 dari arsip rilis, sehingga merilis versi baru ada
 5. **Perbarui `install.ps1` di `main`** dengan `$ReleaseTag = 'v1.1.0'` dan `$ReleaseSha256 = '<hash hasil perhitungan>'`. URL one-liner tetap `main/install.ps1` dan tidak perlu diubah per rilis — hanya dua nilai di dalam `install.ps1` yang berubah.
 
 Kenapa ini tidak sirkular: one-liner mengambil `install.ps1` dari `main` lewat `raw.githubusercontent.com` — skrip itu adalah **verifier**, dipercaya lewat HTTPS GitHub + akun Anda. File yang *diverifikasi* adalah asset Release yang terkunci, dipercaya lewat SHA256 yang Anda publikasikan di langkah 5. Jika `$ReleaseSha256` kosong (hanya selama jeda antara tagging dan pengisian hash), `install.ps1` mencetak peringatan mencolok "SHA256 pin is not configured" dan **tidak** gagal-tutup — lihat `SECURITY.md`.
+
+---
+
+## 🤝 Kontribusi (Contributing)
+
+> [!NOTE]
+> **Bagian ini belum diterjemahkan ke Bahasa Indonesia.**  
+> Panduan kontribusi, alur pull request, dan standar kode tersedia dalam bahasa Inggris di [README.md - Contributing](README.md#-contributing).
 
 ---
 

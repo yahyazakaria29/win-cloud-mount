@@ -2,7 +2,7 @@ name: Validate & Lint
 
 on:
   push:
-    branches: [ main, develop, feature/**, fix/** ]
+    branches: [ main, develop, feature/**, fix/**, feat/** ]
   pull_request:
     branches: [ main ]
 
@@ -27,7 +27,7 @@ jobs:
       - name: Validate PowerShell Script Syntax
         shell: pwsh
         run: |
-          $scripts = @(Get-ChildItem -Path .\scripts\ -Filter *.ps1) + @(Get-Item .\install.ps1, .\uninstall.ps1)
+          $scripts = @(Get-ChildItem -Path .\scripts\ -Filter *.ps1) + @(Get-Item .\install.ps1, .\uninstall.ps1) + @(Get-ChildItem -Path .\tests\ -Filter *.ps1 -ErrorAction SilentlyContinue)
           foreach ($s in $scripts) {
               Write-Host "Parsing syntax for $($s.Name)..."
               $errors = $null
@@ -45,12 +45,18 @@ jobs:
           if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
               Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
           }
-          Write-Host "Running PSScriptAnalyzer (Severity: Error)..."
-          $errors = @('.\scripts', '.\install.ps1', '.\uninstall.ps1') | ForEach-Object {
-              Invoke-ScriptAnalyzer -Path $_ -Recurse -Severity Error
+          Write-Host "Running PSScriptAnalyzer (Severity: Warning, Settings: PSScriptAnalyzerSettings.psd1)..."
+          $warnings = @('.\scripts', '.\install.ps1', '.\uninstall.ps1', '.\tests') | ForEach-Object {
+              Invoke-ScriptAnalyzer -Path $_ -Recurse -Settings .\PSScriptAnalyzerSettings.psd1 -Severity Warning
           }
-          if ($errors) {
-              $errors | Format-Table -AutoSize
-              throw "PSScriptAnalyzer detected $($errors.Count) error-level violations."
+          if ($warnings) {
+              $warnings | Format-Table -AutoSize
+              throw "PSScriptAnalyzer detected $($warnings.Count) warning-level violations."
           }
-          Write-Host "OK: PSScriptAnalyzer passed with 0 errors."
+          Write-Host "OK: PSScriptAnalyzer passed with 0 warnings."
+
+      - name: Run Automated Unit Tests
+        shell: pwsh
+        run: |
+          Write-Host "Running Unit Tests..."
+          pwsh -NoProfile -File .\tests\UnitTests.ps1

@@ -36,7 +36,6 @@
     "buffer_size": "16M",
     "read_chunk_size": "16M",
     "read_chunk_limit": "256M",
-    "read_only": false,
-    "icon": "assets/icons/nextcloud.ico"
+    "read_only": false
   }
 ]

@@ -56,6 +56,20 @@ if (-not $wingetCmd) {
 }
 Write-Success "winget found: $($wingetCmd.Source)"
 
+# Track prerequisites installation state via .prerequisites.json marker
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
+$MarkerPath  = Join-Path $ProjectRoot ".prerequisites.json"
+$installedByWcm = @()
+
+if (Test-Path -LiteralPath $MarkerPath) {
+    try {
+        $existingMarker = Get-Content -LiteralPath $MarkerPath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+        if ($existingMarker -and $existingMarker.installed_by_wcm) {
+            $installedByWcm = @($existingMarker.installed_by_wcm)
+        }
+    } catch { $null = $_ }
+}
+
 # 2. Check and Install WinFsp
 Write-Step "Checking WinFsp (Windows File System Proxy)..."
 $winfspPaths = @(
@@ -74,6 +88,9 @@ if ($winfspInstalled -and (-not $Force)) {
         if ($exitCode -ne 0 -and $exitCode -ne $AlreadyInstalledExitCode) {
             Write-Failure ("WinFsp installation failed (winget exit code 0x{0:X8})." -f [uint32]$exitCode)
             exit 1
+        }
+        if (-not $winfspInstalled -and $exitCode -eq 0) {
+            $installedByWcm += "winfsp"
         }
         Write-Success "WinFsp installation completed."
     } catch {
@@ -97,6 +114,9 @@ if ($rcloneCmd -and (-not $Force)) {
             Write-Failure ("Rclone installation failed (winget exit code 0x{0:X8})." -f [uint32]$exitCode)
             exit 1
         }
+        if (-not $rcloneCmd -and $exitCode -eq 0) {
+            $installedByWcm += "rclone"
+        }
         Write-Success "Rclone installation completed."
         
         # Refresh session PATH
@@ -105,6 +125,18 @@ if ($rcloneCmd -and (-not $Force)) {
         Write-Failure "Failed to install Rclone: $_"
         exit 1
     }
+}
+
+# Record installed tools to marker file
+try {
+    $markerData = [PSCustomObject]@{
+        installed_by_wcm = @($installedByWcm | Select-Object -Unique)
+        installed_at     = (Get-Date).ToString("o")
+    }
+    $markerJson = $markerData | ConvertTo-Json -Depth 3
+    Set-Content -LiteralPath $MarkerPath -Value $markerJson -Encoding UTF8 -Force
+} catch {
+    Write-Info "Note: Could not write prerequisites marker to $MarkerPath : $_"
 }
 
 # 4. Final verification
