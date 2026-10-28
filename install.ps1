@@ -21,7 +21,7 @@
         WCM_SOURCE_ZIP       Use a local .zip instead of downloading (for testing/offline).
                              Unverified unless WCM_SHA256 is set.
 
-    Security: the installer pins to a tagged release (v1.0.0) and verifies its SHA256
+    Security: the installer pins to a tagged release (v1.1.2) and verifies its SHA256
     before extraction. Non-default code sources (WCM_BRANCH / WCM_SOURCE_ZIP) are
     printed and require explicit confirmation.
 
@@ -35,13 +35,13 @@
     $ProgressPreference    = 'SilentlyContinue'   # Invoke-WebRequest is much faster without the progress bar
 
     $Repo       = 'yahyazakaria29/win-cloud-mount'
-    $ReleaseTag = 'v1.1.1'   # Pinned release. Bump on each new release.
+    $ReleaseTag = 'v1.1.2'   # Pinned release. Bump on each new release.
     $InstallDir = if ($env:WCM_INSTALL_DIR) { $env:WCM_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA 'WinCloudMount' }
 
     # SHA256 of the pinned release ASSET (the zip attached to the GitHub Release). This
     # is the byte-stable file the installer downloads and verifies; recompute and bump it
-    # on every release. The value below is the hash of win-cloud-mount-v1.1.1.zip.
-    $ReleaseSha256  = '7D43206FF482424FA99FC315CAF1670F72B4D606AE6B0775652481EB5D09E5BF'
+    # on every release. The value below is the hash of win-cloud-mount-v1.1.2.zip.
+    $ReleaseSha256  = 'AD92730D14EB0F0453B4BAB7E4D7E7ADE1FDEB7146687B3D8374F110A25FE744'
     $ExpectedSha256 = if ($env:WCM_SHA256) { $env:WCM_SHA256 } else { $ReleaseSha256 }
 
     function Write-Step ([string]$m) { Write-Host "`n[STEP] $m" -ForegroundColor Cyan }

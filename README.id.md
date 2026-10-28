@@ -67,7 +67,7 @@ Buka **PowerShell** biasa (tidak perlu "Run as administrator"), lalu tempel:
 irm https://raw.githubusercontent.com/yahyazakaria29/win-cloud-mount/main/install.ps1 | iex
 ```
 
-> 🔒 **Payload terkunci rilis:** one-liner mengambil skrip installer kecil dari `main`, tetapi installer itu mengunduh **asset rilis terkunci** (`v1.1.1`) dan memverifikasi SHA256-nya sebelum mengekstrak. Jadi kode yang benar-benar terpasang adalah snapshot yang telah direview dan berversi — bukan apa pun yang sedang ada di `main`. Lihat [Proses Rilis](#-proses-rilis-untuk-maintainer).
+> 🔒 **Payload terkunci rilis:** one-liner mengambil skrip installer kecil dari `main`, tetapi installer itu mengunduh **asset rilis terkunci** (`v1.1.2`) dan memverifikasi SHA256-nya sebelum mengekstrak. Jadi kode yang benar-benar terpasang adalah snapshot yang telah direview dan berversi — bukan apa pun yang sedang ada di `main`. Lihat [Proses Rilis](#-proses-rilis-untuk-maintainer).
 
 Yang dilakukan perintah ini:
 1. Mengunduh WinCloudMount ke `%LOCALAPPDATA%\WinCloudMount` (tidak perlu Git).
