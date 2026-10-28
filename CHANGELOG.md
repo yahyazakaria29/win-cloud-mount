@@ -15,13 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Token-Aware Remote Parser (`Get-MountTargetFromCmdline`):** Replaced whitespace-splitting regex in `Stop-DriveMount` and `Show-Status` with token-aware parser supporting remote names containing whitespace (e.g., `"kampus it:"`).
 - **Defensive Non-Interactive Flag (`--ask-password=false`):** Added `--ask-password=false` to `rclone mount` and `rclone listremotes` invocations to guarantee fail-fast behavior instead of indefinite blocking in headless/background execution contexts.
 - **Mount Log File Rotation:** Implemented automated log rotation in `Start-DriveMount` archiving log files exceeding 5 MB to `.1`, preventing unbounded disk consumption.
-- **Automated Unit Test Suite:** Introduced `tests/UnitTests.ps1` covering argument escaping, regex parsing, configuration error validation, and log rotation.
+- **Prerequisites Tracking Marker (`.prerequisites.json`):** `Install-Prerequisites.ps1` records only packages explicitly installed by WinCloudMount into `.prerequisites.json` at the root installation directory (`$ProjectRoot`).
+- **Safe Uninstallation Isolation:** `scripts/Uninstall.ps1` and `uninstall.ps1` consult `.prerequisites.json` when `-RemovePrerequisites` is specified, strictly retaining pre-existing tools and emitting warnings if the marker is missing or empty.
+- **Automated Unit Test Suite:** Introduced `tests/UnitTests.ps1` covering argument escaping, regex parsing, configuration error validation, log rotation, and the 3-state prerequisites removal matrix (39 assertions total).
 - **Linter Rule Suppression Policy:** Added `PSScriptAnalyzerSettings.psd1` codifying deliberate CLI style exceptions and elevated CI validation to `-Severity Warning`.
+- **Documentation Callouts (`README.id.md`):** Added callouts for Architecture, VFS Performance Tuning, CLI Reference, and Contributing sections linking to `README.md`.
 
 ### Changed
 - **Extended WinFsp Handshake Window:** Increased cold-start mount polling timeout from 30s to 45s (with 2s intervals) to prevent false `[FAILED]` reports during slow system boot handshakes.
 - **Mount Start Failure Aggregation:** Updated inline `start` command router to track per-drive mount outcomes and terminate with exit code 1 if any drive fails.
 - **CI / CD Quality Gates:** Elevated PSScriptAnalyzer linter threshold in `.github/workflows/validate.yml` from `Error` to `Warning` using repository settings.
+- **Cleaned Example Drive Config:** Removed manual `"icon"` property from `home-nas` in `config/drives.example.json` to allow dynamic fallback.
 
 ### Fixed
 - **PowerShell Automatic Variable Collision:** Renamed `$profile` to `$userProfile` across uninstallation scripts to avoid shadowing the built-in PowerShell automatic `$PROFILE` variable.

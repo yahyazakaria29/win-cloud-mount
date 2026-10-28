@@ -179,6 +179,70 @@ try {
 }
 
 # ---------------------------------------------------------
+# Test Group 5: Prerequisites Removal Plan (Marker Matrix)
+# ---------------------------------------------------------
+Write-Host "`n[Test Group 5] Prerequisites Removal Plan Matrix" -ForegroundColor White
+
+# Load Get-PrerequisiteRemovalPlan function from scripts/Uninstall.ps1 AST
+$uninstallScript = Join-Path $repoRoot "scripts\Uninstall.ps1"
+$uninstallAst = [System.Management.Automation.Language.Parser]::ParseFile($uninstallScript, [ref]$null, [ref]$null)
+$funcAst = $uninstallAst.Find({
+    param($ast)
+    $ast -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $ast.Name -eq "Get-PrerequisiteRemovalPlan"
+}, $true)
+
+if (-not $funcAst) {
+    throw "Get-PrerequisiteRemovalPlan function not found in $uninstallScript"
+}
+. ([scriptblock]::Create($funcAst.Extent.Text))
+
+$prereqTestDir = Join-Path ([System.IO.Path]::GetTempPath()) "wcm_prereq_test_$([Guid]::NewGuid().ToString('N'))"
+New-Item -ItemType Directory -Path $prereqTestDir -Force | Out-Null
+
+try {
+    # Matrix Case 1a: No marker file (both tools pre-existing)
+    $noMarkerPath = Join-Path $prereqTestDir "nonexistent_marker.json"
+    $plan1a = Get-PrerequisiteRemovalPlan -MarkerPath $noMarkerPath
+    Assert-Equal -Expected $false -Actual $plan1a.UninstallWinFsp -Message "Matrix 1a: WinFsp retained when marker is missing"
+    Assert-Equal -Expected $false -Actual $plan1a.UninstallRclone -Message "Matrix 1a: Rclone retained when marker is missing"
+    Assert-Equal -Expected $true -Actual (-not [string]::IsNullOrEmpty($plan1a.WarningMessage)) -Message "Matrix 1a: Explicit warning generated when marker is missing"
+
+    # Matrix Case 1b: Marker exists with empty installed_by_wcm (both tools pre-existing)
+    $emptyMarkerPath = Join-Path $prereqTestDir "empty_marker.json"
+    @{ installed_by_wcm = @(); installed_at = (Get-Date).ToString("o") } | ConvertTo-Json | Set-Content -LiteralPath $emptyMarkerPath -Encoding UTF8
+    $plan1b = Get-PrerequisiteRemovalPlan -MarkerPath $emptyMarkerPath
+    Assert-Equal -Expected $false -Actual $plan1b.UninstallWinFsp -Message "Matrix 1b: WinFsp retained when marker records 0 WCM installs"
+    Assert-Equal -Expected $false -Actual $plan1b.UninstallRclone -Message "Matrix 1b: Rclone retained when marker records 0 WCM installs"
+    Assert-Equal -Expected $true -Actual (-not [string]::IsNullOrEmpty($plan1b.WarningMessage)) -Message "Matrix 1b: Explicit warning generated when no tools installed by WCM"
+
+    # Matrix Case 2a: Only WinFsp installed by WCM (Rclone pre-existing)
+    $winfspMarkerPath = Join-Path $prereqTestDir "winfsp_marker.json"
+    @{ installed_by_wcm = @("winfsp"); installed_at = (Get-Date).ToString("o") } | ConvertTo-Json | Set-Content -LiteralPath $winfspMarkerPath -Encoding UTF8
+    $plan2a = Get-PrerequisiteRemovalPlan -MarkerPath $winfspMarkerPath
+    Assert-Equal -Expected $true -Actual $plan2a.UninstallWinFsp -Message "Matrix 2a: WinFsp uninstalled when installed by WCM"
+    Assert-Equal -Expected $false -Actual $plan2a.UninstallRclone -Message "Matrix 2a: Rclone retained when pre-existing"
+
+    # Matrix Case 2b: Only Rclone installed by WCM (WinFsp pre-existing)
+    $rcloneMarkerPath = Join-Path $prereqTestDir "rclone_marker.json"
+    @{ installed_by_wcm = @("rclone"); installed_at = (Get-Date).ToString("o") } | ConvertTo-Json | Set-Content -LiteralPath $rcloneMarkerPath -Encoding UTF8
+    $plan2b = Get-PrerequisiteRemovalPlan -MarkerPath $rcloneMarkerPath
+    Assert-Equal -Expected $false -Actual $plan2b.UninstallWinFsp -Message "Matrix 2b: WinFsp retained when pre-existing"
+    Assert-Equal -Expected $true -Actual $plan2b.UninstallRclone -Message "Matrix 2b: Rclone uninstalled when installed by WCM"
+
+    # Matrix Case 3: Both installed by WCM
+    $bothMarkerPath = Join-Path $prereqTestDir "both_marker.json"
+    @{ installed_by_wcm = @("winfsp", "rclone"); installed_at = (Get-Date).ToString("o") } | ConvertTo-Json | Set-Content -LiteralPath $bothMarkerPath -Encoding UTF8
+    $plan3 = Get-PrerequisiteRemovalPlan -MarkerPath $bothMarkerPath
+    Assert-Equal -Expected $true -Actual $plan3.UninstallWinFsp -Message "Matrix 3: WinFsp uninstalled when both installed by WCM"
+    Assert-Equal -Expected $true -Actual $plan3.UninstallRclone -Message "Matrix 3: Rclone uninstalled when both installed by WCM"
+    Assert-Equal -Expected $null -Actual $plan3.WarningMessage -Message "Matrix 3: No warning when all recorded tools are scheduled for removal"
+} finally {
+    if (Test-Path $prereqTestDir) {
+        Remove-Item -Path $prereqTestDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# ---------------------------------------------------------
 # Summary
 # ---------------------------------------------------------
 Write-Host "`n==========================================================" -ForegroundColor Cyan

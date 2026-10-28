@@ -293,12 +293,72 @@ public class ShellRefreshUninstaller {
         Write-Ok 'Local VFS cache purge finished.'
     }
 
+    function Get-PrerequisiteRemovalPlan {
+        param ([string]$MarkerPath)
+
+        $plan = [PSCustomObject]@{
+            HasMarker       = $false
+            UninstallWinFsp = $false
+            UninstallRclone = $false
+            InstalledByWcm  = @()
+            WarningMessage  = $null
+        }
+
+        if (-not $MarkerPath -or -not (Test-Path -LiteralPath $MarkerPath)) {
+            $plan.WarningMessage = "Prerequisites marker (.prerequisites.json) not found at $MarkerPath. Assuming all tools were pre-existing. Retaining WinFsp and Rclone."
+            return $plan
+        }
+
+        $plan.HasMarker = $true
+        try {
+            $raw = Get-Content -LiteralPath $MarkerPath -Raw -ErrorAction Stop
+            $data = $raw | ConvertFrom-Json -ErrorAction Stop
+            if ($data -and $data.installed_by_wcm) {
+                $installed = @($data.installed_by_wcm | ForEach-Object { "$_".ToLower().Trim() })
+                $plan.InstalledByWcm = $installed
+                if ($installed -contains 'winfsp') { $plan.UninstallWinFsp = $true }
+                if ($installed -contains 'rclone') { $plan.UninstallRclone = $true }
+            }
+        } catch {
+            $plan.WarningMessage = 'Could not parse prerequisites marker (.prerequisites.json). Retaining WinFsp and Rclone as a safeguard.'
+            return $plan
+        }
+
+        if (-not $plan.UninstallWinFsp -and -not $plan.UninstallRclone) {
+            $plan.WarningMessage = "No prerequisites were recorded as installed by WinCloudMount in $MarkerPath. Retaining WinFsp and Rclone."
+        }
+
+        return $plan
+    }
+
     # 7. Remove Prerequisites if requested
     if ($RemovePrereqs) {
-        Write-Step 'Uninstalling WinFsp and Rclone via Winget...'
-        winget uninstall --id rclone.rclone --silent --accept-source-agreements
-        winget uninstall --id WinFsp.WinFsp --silent --accept-source-agreements
-        Write-Ok 'Prerequisites uninstalled.'
+        $markerFile = Join-Path $InstallDir '.prerequisites.json'
+        $plan = Get-PrerequisiteRemovalPlan -MarkerPath $markerFile
+
+        if ($plan.WarningMessage) {
+            Write-Warning $plan.WarningMessage
+        }
+
+        if ($plan.UninstallRclone) {
+            Write-Step 'Uninstalling Rclone (installed by WinCloudMount) via Winget...'
+            winget uninstall --id rclone.rclone --silent --accept-source-agreements
+            Write-Ok 'Rclone uninstalled.'
+        } else {
+            Write-Note 'Retaining Rclone (pre-existing or not installed by WinCloudMount).'
+        }
+
+        if ($plan.UninstallWinFsp) {
+            Write-Step 'Uninstalling WinFsp (installed by WinCloudMount) via Winget...'
+            winget uninstall --id WinFsp.WinFsp --silent --accept-source-agreements
+            Write-Ok 'WinFsp uninstalled.'
+        } else {
+            Write-Note 'Retaining WinFsp (pre-existing or not installed by WinCloudMount).'
+        }
+
+        if (Test-Path -LiteralPath $markerFile) {
+            Remove-Item -LiteralPath $markerFile -Force -ErrorAction SilentlyContinue
+        }
     }
 
     # 8. Delete installation directory if requested
