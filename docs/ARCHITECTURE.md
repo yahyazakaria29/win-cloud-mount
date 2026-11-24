@@ -2,7 +2,7 @@
 
 ## 1. High-Level System Architecture
 
-WinCloudMount bridges Windows user-space file operations directly to multi-cloud object/file storage backends without requiring third-party commercial sync clients.
+WinCloudMount bridges Windows user-space file operations directly to multi-cloud and NAS storage backends without third-party commercial sync clients.
 
 ```text
 +-----------------------------------------------------------------------+
@@ -25,8 +25,8 @@ WinCloudMount bridges Windows user-space file operations directly to multi-cloud
 |   +---------------------------------------------------------------+   |
 |   |                      VFS Caching Layer                        |   |
 |   |  - Sparse File Cache (cache-mode full)                        |   |
-|   |  - Chunked Streaming & Read-Ahead (16MB chunks)               |   |
-|   |  - Bi-directional Dirty Cache Flusher                         |   |
+|   |  - Parallel Chunk Streaming & Disk Read-Ahead                 |   |
+|   |  - Dirty Upload Flusher & Minimum Free Space Guard            |   |
 |   +---------------------------------------------------------------+   |
 |                                  |                                    |
 |   +---------------------------------------------------------------+   |
@@ -47,16 +47,16 @@ WinCloudMount bridges Windows user-space file operations directly to multi-cloud
 ## 2. Kernel & User-Space Bridging: WinFsp vs Dokan
 
 Air Live Drive and older cloud mounters rely on **Dokan** or **CBFS**:
-* Dokan implements a .NET wrapper around user-mode filesystems. Under continuous heavy I/O (e.g. video rendering or scrubbing large archives), Dokan's managed garbage collection and inter-process locking frequently induce Explorer lockups and high CPU spikes.
-* **WinFsp (Windows File System Proxy)** is written entirely in native C, using high-performance kernel I/O completion routines and zero-copy user-mode buffers. It provides true NTFS/FAT volume emulation with zero managed runtime overhead.
+* Dokan wraps user-mode filesystems through additional managed layers. Under sustained heavy I/O (such as video rendering or scrubbing large archives), managed garbage collection and inter-process locking can induce Explorer stalls and CPU spikes.
+* **WinFsp (Windows File System Proxy)** is written in native C, using kernel I/O completion routines and zero-copy user-mode buffers to provide NTFS/FAT volume emulation without managed runtime overhead.
 
 ---
 
 ## 3. The VFS (Virtual File System) Cache Pipeline
 
-Windows Explorer requires random-access byte-range operations. Cloud APIs (such as Google Drive REST or AWS S3), conversely, operate via immutable HTTP GET/PUT operations. 
+Windows Explorer requires random-access byte-range operations, while cloud APIs (such as Google Drive REST, Microsoft Graph, or AWS S3) operate via HTTP GET/PUT requests.
 
-The VFS caching layer reconciles this impedance mismatch:
+The VFS caching layer reconciles this mismatch:
 
 ```text
 [Windows Read Request: Bytes 5000-8000]
@@ -66,25 +66,34 @@ The VFS caching layer reconciles this impedance mismatch:
           /                      \
         YES                       NO
         /                          \
-Read from local sparse file   Download 16MB chunk via HTTP Range request
-(Instant memory/disk speed)   Store chunk in cache directory (.cache/<drive_name>)
-                               Serve bytes 5000-8000 to Windows
+Read from local sparse file   Fetch chunk(s) via HTTP Range requests
+(Instant NVMe/SSD speed)      Store in .cache/<drive_name> + read-ahead
+                              Serve bytes 5000-8000 to Windows
 ```
 
-### Key VFS Configuration Flags & Rationale
+### Key VFS Configuration Flags & Rationale (v1.2.0)
 
 1. **`--vfs-cache-mode full`**:
-   * *Problem:* Windows applications like Microsoft Office write temporary hidden lock files (`~$Document.docx`) and perform in-place byte overwrites.
-   * *Solution:* `full` cache mode creates a local sparse representation of opened files. File modifications occur instantaneously on the local disk, and modified (dirty) blocks are queued for background upload. This eliminates Windows error `0x80070032: The request is not supported`.
+   * *Problem:* Windows applications such as Microsoft Office create temporary hidden lock files (`~$Document.docx`) and perform in-place byte overwrites.
+   * *Solution:* `full` cache mode creates a local sparse representation of opened files. Modifications happen immediately on local disk, and dirty blocks queue for background upload. This avoids Windows error `0x80070032: The request is not supported`.
 
-2. **`--buffer-size 16M`**:
-   * *Problem:* Default unconstrained buffers can quickly consume hundreds of megabytes of RAM when multiple files or folders are opened simultaneously.
-   * *Solution:* Capping stream memory buffers at 16MB keeps memory consumption bounded between 20MB and 35MB per mounted drive.
+2. **`--attr-timeout 1s`**:
+   * *Problem:* Caching file sizes and attributes in the WinFsp kernel for hours (`24h`) risks file truncation or trailing garbage bytes if a remote file changes length on another device.
+   * *Solution:* Keeping `--attr-timeout` at `1s` prevents excessive kernel callbacks while ensuring fresh file sizes from VFS/rclone. Directory listings remain fast via `--dir-cache-time 72h` paired with `--poll-interval 1m` invalidation on polling remotes.
 
-3. **`--vfs-read-chunk-size 16M --vfs-read-chunk-size-limit 256M`**:
-   * *Problem:* Downloading an entire 10GB video file just to preview the first 5 seconds creates extreme network congestion and disk thrashing.
-   * *Solution:* Rclone fetches data in progressive 16MB increments. Streaming begins in milliseconds, scaling up to 256MB chunks only for sustained sequential transfers.
+3. **`--buffer-size 16M` + `--vfs-read-ahead 128M`**:
+   * *Problem:* Large per-handle RAM buffers consume hundreds of megabytes when opening many files concurrently.
+   * *Solution:* Keeping `--buffer-size` at `16M` caps RAM per open stream, while `--vfs-read-ahead 128M` pre-stages sequential reads on local SSD storage.
 
-4. **`--cache-dir <Dedicated Data Drive>`**:
-   * *Problem:* Storing cache on partition `C:` risks filling the system drive during heavy workloads, degrading Windows performance.
-   * *Solution:* WinCloudMount isolates cache paths inside the project root (`.cache/<drive_name>`) or configurable secondary partitions, enforcing hard capacity ceilings (`--vfs-cache-max-size`).
+4. **`--vfs-read-chunk-size 16M` + `--vfs-read-chunk-streams 4`**:
+   * *Problem:* Single-stream sequential fetches underutilize broadband links on high-latency cloud APIs, while downloading multi-gigabyte videos upfront stalls playback.
+   * *Solution:* Reads start in `16M` range chunks across `4` parallel streams on capable remotes. When Google Drive uses rclone's shared `client_id`, WinCloudMount automatically falls back to single-stream progressive chunking (`--vfs-read-chunk-size-limit 256M`) and omits aggressive pacer overrides to avoid `403 RATE_LIMIT_EXCEEDED` throttling.
+
+5. **Backend-Aware Upload & Timestamp Handling**:
+   * **Google Drive** (with custom `client_id`): `--drive-chunk-size 32M --transfers 6 --drive-pacer-min-sleep 10ms --drive-pacer-burst 200`.
+   * **OneDrive**: `--onedrive-chunk-size 50Mi --transfers 4` (respects OneDrive's 320 KiB chunk-multiple rule while replacing the slow 10 MiB default).
+   * **Accurate Modification Times**: Global `--no-modtime` is disabled for Drive/OneDrive so Explorer *Date Modified* stays accurate, and enabled by default only on object stores (`s3`, `swift`, `b2`).
+
+6. **`--vfs-cache-max-size`, `--vfs-cache-min-free-space`, and `--vfs-cache-max-age 168h`**:
+   * *Problem:* Unbounded cache directories risk exhausting system drive `C:`, while short 24h expirations force repeated re-downloads of active files.
+   * *Solution:* WinCloudMount keeps clean cached files for up to 7 days (`168h`) within explicit size caps and minimum host free-space thresholds, while `Stop-DriveMount` waits up to 15 seconds for dirty uploads to flush before stopping a process.

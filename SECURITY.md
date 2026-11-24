@@ -4,6 +4,7 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 1.2.x   | :white_check_mark: |
 | 1.1.x   | :white_check_mark: |
 | 1.0.x   | :white_check_mark: |
 | < 1.0   | :x:                |
@@ -18,9 +19,7 @@ WinCloudMount is designed with a minimal attack surface and strict principle of 
    All mounting, caching, and registry branding operations run entirely within the current user context (`HKCU:\` and `%LOCALAPPDATA%`). No root/SYSTEM access is needed for daily operations.
 
 2. **Credential Isolation & Non-Interactive Safety:**  
-   WinCloudMount **never** requests, reads, stores, or transmits your cloud credentials or OAuth tokens. All authentication tokens are handled exclusively by [Rclone](https://rclone.org) inside `%APPDATA%
-clone
-clone.conf`.
+   WinCloudMount **never** requests, reads, stores, or transmits your cloud credentials or OAuth tokens. All authentication tokens are handled exclusively by [Rclone](https://rclone.org) inside `%APPDATA%\rclone\rclone.conf`.
    - Operations pass `--ask-password=false` to guarantee daemon commands fail fast rather than hang silently awaiting interactive password input in non-interactive / headless background contexts.
    - For shared or multi-user workstations, encrypting your `rclone.conf` with a master configuration password via `rclone config` is strongly recommended.
    - The repository's `.gitignore` explicitly blocks all configuration, log, and cache files from ever being committed.

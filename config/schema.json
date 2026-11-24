@@ -5,15 +5,16 @@
   "type": "array",
   "items": {
     "type": "object",
-    "required": ["remote", "drive_letter", "volume_name"],
+    "required": ["name", "remote", "drive_letter", "volume_name"],
     "properties": {
       "name": {
         "type": "string",
-        "description": "Identifier name for the drive instance"
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+        "description": "Identifier name for the drive instance (filename-safe, used for cache and log paths)."
       },
       "remote": {
         "type": "string",
-        "description": "Rclone remote name with trailing colon (e.g. 'gdrive:')."
+        "description": "Rclone remote name with trailing colon and optional subpath (e.g. 'gdrive:')."
       },
       "drive_letter": {
         "type": "string",
@@ -30,33 +31,88 @@
       },
       "cache_size": {
         "type": "string",
-        "pattern": "^[0-9]+[MGTPmgtp]$",
+        "pattern": "^[1-9][0-9]*[KkMmGgTtPp][Ii]?$",
         "description": "Maximum size cap for the local disk cache (e.g. '20G')."
       },
       "cache_min_free_space": {
         "type": "string",
-        "pattern": "^[0-9]+[MGTPmgtp]$",
-        "description": "Target minimum free space to keep on the cache drive (e.g. '10G'). Rclone will prioritize evicting cached files when free space drops below this."
+        "pattern": "^[1-9][0-9]*[KkMmGgTtPp][Ii]?$",
+        "description": "Target minimum free space to keep on the cache drive (e.g. '15G')."
       },
       "buffer_size": {
         "type": "string",
-        "pattern": "^[0-9]+[MGTPmgtp]$",
-        "description": "Memory buffer size per open file stream (e.g. '16M')."
+        "pattern": "^(0|[0-9]+[KkMmGgTtPp][Ii]?)$",
+        "description": "Memory buffer size per open file stream (e.g. '16M' or '0')."
+      },
+      "vfs_read_ahead": {
+        "type": "string",
+        "pattern": "^(0|[0-9]+[KkMmGgTtPp][Ii]?)$",
+        "description": "Extra sequential read-ahead buffered on disk in VFS full cache mode (e.g. '128M')."
       },
       "read_chunk_size": {
         "type": "string",
-        "pattern": "^[0-9]+[MGTPmgtp]$",
-        "description": "Initial chunk size requested during sequential streaming."
+        "pattern": "^[1-9][0-9]*[KkMmGgTtPp][Ii]?$",
+        "description": "Initial or fixed chunk size requested during streaming reads (e.g. '16M')."
       },
       "read_chunk_limit": {
         "type": "string",
-        "pattern": "^[0-9]+[MGTPmgtp]$",
-        "description": "Maximum chunk size ceiling for streaming requests."
+        "pattern": "^[1-9][0-9]*[KkMmGgTtPp][Ii]?$",
+        "description": "Maximum chunk size ceiling when read_chunk_streams is 0 (e.g. '256M')."
+      },
+      "read_chunk_streams": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 32,
+        "description": "Number of parallel chunk read streams (0 uses progressive chunking up to read_chunk_limit)."
       },
       "upload_chunk_size": {
         "type": "string",
-        "pattern": "^[0-9]+[MGTPmgtp]$",
-        "description": "Chunk size for multipart cloud uploads, e.g. '32M'."
+        "pattern": "^[1-9][0-9]*[KkMmGgTtPp][Ii]?$",
+        "description": "Chunk size for multipart cloud uploads (e.g. '32M' for Google Drive, '50Mi' for OneDrive)."
+      },
+      "transfers": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 32,
+        "description": "Maximum concurrent background VFS uploads for dirty files."
+      },
+      "dir_cache_time": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*(ms|s|m|h|d))$",
+        "description": "Duration to cache directory listings in memory (e.g. '72h')."
+      },
+      "attr_timeout": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*(ms|s|m|h|d))$",
+        "description": "Duration the kernel caches file attributes and sizes (default '1s' to avoid stale-size corruption)."
+      },
+      "poll_interval": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*(ms|s|m|h|d))$",
+        "description": "Interval between remote change-notification polls on supported backends (e.g. '1m')."
+      },
+      "vfs_cache_max_age": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*(ms|s|m|h|d))$",
+        "description": "Maximum age since last access before clean cached objects are evicted (e.g. '168h')."
+      },
+      "vfs_write_back": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*(ms|s|m|h|d))$",
+        "description": "Delay after file close before uploading dirty cached files (e.g. '5s')."
+      },
+      "no_modtime": {
+        "type": "boolean",
+        "description": "Skip reading and writing modification times (useful for S3/Swift object storage; false by default on Drive/OneDrive)."
+      },
+      "vfs_refresh": {
+        "type": "boolean",
+        "description": "Pre-warm directory cache recursively in the background on mount start."
+      },
+      "log_level": {
+        "type": "string",
+        "enum": ["ERROR", "NOTICE", "INFO", "DEBUG"],
+        "description": "Rclone mount log verbosity level (default 'NOTICE')."
       },
       "read_only": {
         "type": "boolean",

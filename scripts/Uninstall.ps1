@@ -323,16 +323,24 @@ if ($RemovePrerequisites) {
 
     if ($plan.UninstallRclone) {
         Write-Host "  Uninstalling Rclone (installed by WinCloudMount) via Winget..." -ForegroundColor Yellow
-        winget uninstall --id rclone.rclone --silent --accept-source-agreements
-        Write-Host "  [OK] Rclone uninstalled." -ForegroundColor Green
+        winget uninstall --id Rclone.Rclone --exact --silent --accept-source-agreements
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  [OK] Rclone uninstalled." -ForegroundColor Green
+        } else {
+            Write-Warning ("  Rclone uninstall exited with code 0x{0:X8}." -f [uint32]$LASTEXITCODE)
+        }
     } else {
         Write-Host "  Retaining Rclone (pre-existing or not installed by WinCloudMount)." -ForegroundColor Gray
     }
 
     if ($plan.UninstallWinFsp) {
         Write-Host "  Uninstalling WinFsp (installed by WinCloudMount) via Winget..." -ForegroundColor Yellow
-        winget uninstall --id WinFsp.WinFsp --silent --accept-source-agreements
-        Write-Host "  [OK] WinFsp uninstalled." -ForegroundColor Green
+        winget uninstall --id WinFsp.WinFsp --exact --silent --accept-source-agreements
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  [OK] WinFsp uninstalled." -ForegroundColor Green
+        } else {
+            Write-Warning ("  WinFsp uninstall exited with code 0x{0:X8}." -f [uint32]$LASTEXITCODE)
+        }
     } else {
         Write-Host "  Retaining WinFsp (pre-existing or not installed by WinCloudMount)." -ForegroundColor Gray
     }

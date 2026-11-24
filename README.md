@@ -170,12 +170,14 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Setup-Autostart.ps1 -Acti
 
 ## ⚙️ VFS Performance Tuning
 
-WinCloudMount applies fine-tuned VFS parameters out of the box:
+WinCloudMount applies fine-tuned VFS and backend-specific parameters out of the box (overridable per drive in `config/drives.json`):
 
-* `--vfs-cache-mode full`: Mandatory for Windows Explorer. Enables sparse file emulation so Microsoft Office lock files and video editors can read/write without `0x80070032` errors.
-* `--buffer-size 16M`: Keeps RAM consumption bounded at ~25MB per drive (unlike unconstrained tools that eat 400MB+).
-* `--vfs-read-chunk-size 16M --vfs-read-chunk-size-limit 256M`: Streams files on-demand in small progressive chunks. Video playback begins in milliseconds without downloading entire gigabyte-sized files.
-* `--cache-dir .cache/...`: Safely confines disk cache inside the project directory (or secondary partition), preventing system drive `C:` exhaustion.
+* `--vfs-cache-mode full`: Mandatory for Windows Explorer. Enables sparse file emulation so Microsoft Office lock files and media editors can read and write without `0x80070032` errors.
+* `--buffer-size 16M` + `--vfs-read-ahead 128M`: Keeps per-stream RAM bounded while staging sequential reads ahead on local SSD storage.
+* `--vfs-read-chunk-size 16M --vfs-read-chunk-streams 4`: Reads media and large archives across parallel HTTP range streams (automatically falling back to `--vfs-read-chunk-size-limit 256M` on Google Drive remotes using rclone's shared `client_id` to prevent 403 rate-limit errors).
+* `--attr-timeout 1s` + `--dir-cache-time 72h` + `--poll-interval 1m`: Keeps kernel file sizes fresh to avoid stale-size truncation while caching directory trees in memory with background change polling.
+* **Backend-Aware Uploads & Timestamps**: Applies `--drive-chunk-size 32M` (plus pacer tuning only when a custom Google `client_id` is present) and `--onedrive-chunk-size 50Mi` for OneDrive, while preserving accurate modification times (`--no-modtime` is limited to object stores like S3/Swift/B2).
+* `--cache-dir .cache/...` + `--vfs-cache-max-age 168h`: Confines disk cache inside `.cache/` (or a secondary partition) with configurable size caps and minimum free-space protection (`--vfs-cache-min-free-space`).
 
 ---
 
@@ -200,13 +202,16 @@ See [docs/PROVIDERS_SETUP.md](docs/PROVIDERS_SETUP.md) for step-by-step connecti
 
 | Command | Description |
 | :--- | :--- |
-| `.\scripts\Mount-Manager.ps1 -Action start` | Mounts all configured drives. |
+| `.\scripts\Mount-Manager.ps1 -Action start` | Mounts all configured drives concurrently with network/TLS preflight and retry waves. |
 | `.\scripts\Mount-Manager.ps1 -Action start -DriveLetter E:` | Mounts only drive `E:`. |
-| `.\scripts\Mount-Manager.ps1 -Action stop` | Unmounts all virtual cloud drives. |
+| `.\scripts\Mount-Manager.ps1 -Action stop` | Flushes pending dirty uploads (up to 15s wait) and stops all managed mount processes. |
 | `.\scripts\Mount-Manager.ps1 -Action stop -DriveLetter E:` | Unmounts only drive `E:`. |
-| `.\scripts\Mount-Manager.ps1 -Action restart` | Restarts all active mount processes. |
-| `.\scripts\Mount-Manager.ps1 -Action status` | Shows process PIDs, RAM usage, and explorer volumes. |
-| `.\scripts\Mount-Manager.ps1 -Action test` | Validates configuration integrity and rclone remotes. |
+| `.\scripts\Mount-Manager.ps1 -Action unmount -DriveLetter E:` | Alias for `-Action stop` targeting a specific drive or all drives. |
+| `.\scripts\Mount-Manager.ps1 -Action restart` | Safely stops and remounts all configured drives (supports `-DriveLetter`). |
+| `.\scripts\Mount-Manager.ps1 -Action status` | Shows process PIDs, RAM usage, VFS cache size, pending dirty file count, and Explorer volumes. |
+| `.\scripts\Mount-Manager.ps1 -Action test` | Validates `drives.json`, cross-drive uniqueness, backend types, Google custom `client_id` status, and `rclone.conf` remotes. |
+| `.\scripts\Mount-Manager.ps1 -Action version` | Prints the installed WinCloudMount version. |
+| `-ConfigFile <path>` / `-UseExample` | Optional parameters to run `start`, `restart`, or `test` against a custom config path or `config\drives.example.json`. |
 
 ---
 

@@ -1,7 +1,5 @@
-' =========================================================================
-' WinCloudMount - Silent Background Launcher (VBScript)
-' Runs PowerShell Mount-Manager without flashing CMD or console windows.
-' =========================================================================
+' WinCloudMount legacy silent launcher fallback for Windows builds before 18362.
+' Runs PowerShell Mount-Manager without flashing console windows.
 
 Option Explicit
 

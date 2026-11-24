@@ -118,7 +118,7 @@ if ($rcloneCmd -and (-not $Force)) {
             $installedByWcm += "rclone"
         }
         Write-Success "Rclone installation completed."
-        
+
         # Refresh session PATH
         $env:PATH = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
     } catch {
