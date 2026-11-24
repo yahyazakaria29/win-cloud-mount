@@ -124,7 +124,7 @@
         Write-Ok ("Package ready ({0:N0} KB)" -f ((Get-Item $zipPath).Length / 1KB))
 
         # ------------------------------------------------------------ SHA256 verification
-        # Fail-closed: never extract a package whose checksum cannot be verified.
+        # Fail-closed when a SHA256 pin is configured; warns explicitly when unpinned.
         if ($ExpectedSha256) {
             Write-Step 'Verifying package SHA256...'
             $actualHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
@@ -155,9 +155,27 @@
 
         $isUpdate = Test-Path (Join-Path $InstallDir 'scripts\Mount-Manager.ps1')
         New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-        # Copies project files only. config\drives.json, .cache\ and logs\ are not part of the
-        # package, so an existing setup is preserved during updates.
-        Copy-Item -Path (Join-Path $srcRoot.FullName '*') -Destination $InstallDir -Recurse -Force
+        # Copy only runtime directories and top-level docs; preserve config\drives.json, .cache\, and logs\.
+        foreach ($dirName in @('scripts', 'assets', 'launcher', 'docs')) {
+            $srcDir = Join-Path $srcRoot.FullName $dirName
+            if (Test-Path -LiteralPath $srcDir) {
+                Copy-Item -LiteralPath $srcDir -Destination $InstallDir -Recurse -Force
+            }
+        }
+        $cfgDestDir = Join-Path $InstallDir 'config'
+        New-Item -ItemType Directory -Path $cfgDestDir -Force | Out-Null
+        foreach ($cfgItem in @('drives.example.json', 'schema.json')) {
+            $srcCfg = Join-Path $srcRoot.FullName "config\$cfgItem"
+            if (Test-Path -LiteralPath $srcCfg) {
+                Copy-Item -LiteralPath $srcCfg -Destination (Join-Path $cfgDestDir $cfgItem) -Force
+            }
+        }
+        foreach ($rootFile in @('README.md', 'README.id.md', 'CHANGELOG.md', 'SECURITY.md', 'LICENSE', 'install.ps1', 'uninstall.ps1')) {
+            $srcFile = Join-Path $srcRoot.FullName $rootFile
+            if (Test-Path -LiteralPath $srcFile) {
+                Copy-Item -LiteralPath $srcFile -Destination (Join-Path $InstallDir $rootFile) -Force
+            }
+        }
 
         # Remove the "downloaded from the internet" flag so the scripts run under RemoteSigned policy
         Get-ChildItem -LiteralPath $InstallDir -Recurse -File -Include *.ps1, *.vbs |

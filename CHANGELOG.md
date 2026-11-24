@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-11-24
+
+### Added
+- **Parallel Multi-Drive Startup & Wave Retries:** `Mount-Manager.ps1` launches unmounted drives concurrently and polls readiness in parallel waves, issuing a single `SHChangeNotify` refresh after mounts complete instead of refreshing Explorer per drive.
+- **Backend-Aware VFS & Upload Tuning (`Build-RcloneMountArgs` / `Get-RemoteBackendInfo`):** Automatically detects backend type (`drive`, `onedrive`, `s3`, etc.) and whether Google Drive remotes use a custom OAuth `client_id`. Adds OneDrive multipart chunk tuning (`--onedrive-chunk-size 50Mi`), parallel read streams (`--vfs-read-chunk-streams 4`), disk read-ahead (`--vfs-read-ahead 128M`), extended cache retention (`--vfs-cache-max-age 168h`, `--dir-cache-time 72h`), and configurable `--transfers` / `--vfs-write-back` / `--log-level`.
+- **Single-Instance Orchestrator Lock & Persistent Log (`logs/orchestrator.log`):** Serializes concurrent `start`/`stop`/`restart`/`unmount` calls via a project-scoped named `Mutex` and records startup, network, and error diagnostics with 5 MB rotation (`Invoke-LogRotation`).
+- **Live VFS Cache & Dirty Upload Visibility:** `Mount-Manager.ps1 -Action status` displays per-drive `Cache (MB)`, `Dirty` upload counts, and filesystem `Format`, warning if any uploads are pending.
+- **Cross-Drive Config Validation (`Get-DriveCollectionErrors`):** Rejects duplicate `drive_letter`, duplicate `name`, or shared `cache_dir` paths across `drives.json` entries, plus filename-safe `name` enforcement and expanded `schema.json` validation rules.
+- **Headless Conhost Autostart & Network Recovery Trigger:** `Setup-Autostart.ps1` prefers native `conhost.exe --headless` on Windows 10 1903+ / Windows 11 (retaining `SilentRunner.vbs` as a fallback) and adds a NetworkProfile Event ID `10000` trigger so drives mount automatically when Wi-Fi or Ethernet connects after an offline boot.
+- **Expanded Unit Tests (`tests/UnitTests.ps1`):** Added assertions for `Build-RcloneMountArgs`, `Get-DriveCollectionErrors`, `Get-CacheDirFromCmdline`, `Resolve-DriveIcon`, `Invoke-LogRotation`, `Test-UnsafePurgePath`, and expanded `Get-DriveConfigErrors` cases.
+
+### Changed
+- **Safer Kernel Attribute Caching & Timestamp Accuracy:** Lowered default `--attr-timeout` from `24h` to `1s` to prevent stale-size file truncation when remote files change outside Windows, and removed global `--no-modtime` so Google Drive and OneDrive preserve accurate modification timestamps (`--no-modtime` now defaults to S3/Swift/B2 or explicit `no_modtime: true`).
+- **Guarded Google Drive Pacer Burst:** Applied `--drive-pacer-min-sleep 10ms --drive-pacer-burst 200` only when a custom OAuth `client_id` is configured, preventing shared-client 403 rate-limit storms.
+- **TCP/TLS Network Readiness Check:** Upgraded `Wait-ForNetworkConnection` to probe port `443` reachability instead of relying on local DNS cache responses.
+- **Graceful Dirty-Cache Drain & Permanent Error Short-Circuit:** `Stop-DriveMount` waits up to 15 seconds for dirty VFS uploads to flush before stopping, and startup skips remaining retry attempts when logs show permanent configuration or OAuth errors.
+- **Streamlined Installer & Uninstaller:** `install.ps1` deploys only runtime files instead of copying `.github/` or `tests/`, and `uninstall.ps1` delegates to `scripts/Uninstall.ps1` to eliminate duplicated teardown code and double cache prompts.
+- **Updated Documentation:** Rewrote `docs/GOOGLE_CLIENT_ID_SETUP.md` for the current Google Auth Platform (`Branding` + `Audience` + `Publish app`), updated `docs/ARCHITECTURE.md`, and completed all untranslated sections in `README.id.md`.
+
+### Fixed
+- **Drive-Letter Stop Matching Bug:** Fixed `Stop-DriveMount -DriveLetter C:` matching path substrings in `rclone.exe` command lines by comparing strictly against the parsed mount target drive letter.
+- **Token-Aware `--cache-dir` Parsing (`Get-CacheDirFromCmdline`):** Fixed greedy regex capture on unquoted `--cache-dir` values.
+- **Winget Uninstall Consistency:** Standardized `Rclone.Rclone --exact` and checked `$LASTEXITCODE` in `scripts/Uninstall.ps1`.
+- **SECURITY.md Formatting & Linter Hygiene:** Fixed the broken `\r` escape inside `%APPDATA%\rclone\rclone.conf` in `SECURITY.md` and removed trailing whitespace in `Install-Prerequisites.ps1` and `Setup-Autostart.ps1`.
+
 ## [1.1.2] - 2026-10-28
 
 ### Added
@@ -66,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed drive initialization failure during Windows boot caused by transient DNS and network adapter race conditions.
 - Fixed disconnected red-X drive icons in Windows Explorer using targeted `MountPoints2` registry sanitization.
 
+[1.2.0]: https://github.com/yahyazakaria29/win-cloud-mount/releases/tag/v1.2.0
 [1.1.2]: https://github.com/yahyazakaria29/win-cloud-mount/releases/tag/v1.1.2
 [1.1.1]: https://github.com/yahyazakaria29/win-cloud-mount/releases/tag/v1.1.1
 [1.1.0]: https://github.com/yahyazakaria29/win-cloud-mount/releases/tag/v1.1.0

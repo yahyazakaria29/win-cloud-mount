@@ -46,11 +46,28 @@ Software komersial seperti **Air Live Drive** atau **RaiDrive** membatasi fitur 
 
 ---
 
-## 🛠️ Arsitektur (Architecture)
+## 🛠️ Arsitektur
 
-> [!NOTE]
-> **Bagian ini belum diterjemahkan ke Bahasa Indonesia.**  
-> Silakan merujuk ke dokumentasi lengkap arsitektur dan diagram alir dalam bahasa Inggris di [README.md - Architecture](README.md#-architecture).
+WinCloudMount menggabungkan dua engine open-source utama agar cloud storage terbaca sebagai partisi lokal di Windows:
+1. **[WinFsp (Windows File System Proxy)](https://winfsp.dev):** Driver filter kernel berbahasa C yang mengekspos penyimpanan cloud sebagai volume NTFS/FAT virtual.
+2. **[Rclone](https://rclone.org):** Engine multi-cloud dengan layer VFS caching lokal untuk pembacaan chunk paralel dan upload asinkron di latar belakang.
+
+```text
+[ Windows Explorer / Office / Adobe ]
+                 │
+                 ▼ Win32 File I/O
+       [ WinFsp Kernel Proxy ]
+                 │
+                 ▼ Fast User-Mode Ring Buffer
+   [ WinCloudMount (Rclone Engine) ]
+                 │
+         ┌───────┴───────────────────┐
+         ▼                           ▼
+[ Local VFS Cache (.cache/) ]   [ Remote Cloud APIs ]
+(Drag-and-drop lokal cepat)      (Upload TLS 1.3 asinkron)
+```
+
+Spesifikasi teknis lengkap tersedia di [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -151,9 +168,14 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\Setup-Autostart.ps1 -Acti
 
 ## ⚙️ VFS Performance Tuning
 
-> [!NOTE]
-> **Bagian ini belum diterjemahkan ke Bahasa Indonesia.**  
-> Silakan merujuk ke panduan tuning performa cache VFS dalam bahasa Inggris di [README.md - VFS Performance Tuning](README.md#%EF%B8%8F-vfs-performance-tuning).
+WinCloudMount menerapkan parameter VFS dan optimasi per-backend secara otomatis (dapat diatur per drive di `config/drives.json`):
+
+* `--vfs-cache-mode full`: Wajib untuk Windows Explorer agar aplikasi seperti Microsoft Office dan editor media bisa membuat file lock sementara serta menulis secara acak tanpa error `0x80070032`.
+* `--buffer-size 16M` + `--vfs-read-ahead 128M`: Menjaga pemakaian RAM tetap hemat per stream sambil melakukan read-ahead sekuensial ke SSD lokal.
+* `--vfs-read-chunk-size 16M --vfs-read-chunk-streams 4`: Mempercepat streaming dan pembacaan file besar lewat 4 stream HTTP range paralel (otomatis turun ke `--vfs-read-chunk-size-limit 256M` pada Google Drive yang masih memakai shared `client_id` agar terhindar dari error 403).
+* `--attr-timeout 1s` + `--dir-cache-time 72h` + `--poll-interval 1m`: Menjaga ukuran file di kernel selalu akurat agar terhindar dari risiko pemotongan file, sekaligus menyimpan daftar folder di memori dengan pembaruan berkala.
+* **Upload & Timestamp Sesuai Backend**: Memakai `--drive-chunk-size 32M` (dengan tuning pacer khusus jika Client ID Google pribadi terpasang) dan `--onedrive-chunk-size 50Mi` untuk OneDrive, serta mempertahankan akurasi *Date Modified* (`--no-modtime` hanya aktif default untuk object storage seperti S3/Swift/B2).
+* `--cache-dir .cache/...` + `--vfs-cache-max-age 168h`: Mengisolasi cache di dalam `.cache/` (atau partisi kedua) lengkap dengan batas ukuran maksimal dan proteksi sisa ruang disk (`--vfs-cache-min-free-space`).
 
 ---
 
@@ -177,9 +199,18 @@ WinCloudMount menyertakan bundel file `.ico` resmi multi-resolusi (16x16 hingga 
 
 ## 🔍 Referensi CLI (`Mount-Manager.ps1`)
 
-> [!NOTE]
-> **Bagian ini belum diterjemahkan ke Bahasa Indonesia.**  
-> Silakan merujuk ke tabel referensi perintah dan opsi CLI dalam bahasa Inggris di [README.md - CLI Reference](README.md#-cli-reference-mount-managerps1).
+| Perintah | Deskripsi |
+| :--- | :--- |
+| `.\scripts\Mount-Manager.ps1 -Action start` | Menjalankan semua drive terdaftar secara paralel dengan cek koneksi TLS dan retry otomatis. |
+| `.\scripts\Mount-Manager.ps1 -Action start -DriveLetter E:` | Hanya me-mount drive `E:`. |
+| `.\scripts\Mount-Manager.ps1 -Action stop` | Menunggu upload cache tertunda (maksimal 15 detik) lalu menghentikan semua mount terkelola. |
+| `.\scripts\Mount-Manager.ps1 -Action stop -DriveLetter E:` | Hanya melepas drive `E:`. |
+| `.\scripts\Mount-Manager.ps1 -Action unmount -DriveLetter E:` | Alias dari `-Action stop` untuk drive tertentu atau seluruh drive. |
+| `.\scripts\Mount-Manager.ps1 -Action restart` | Menghentikan dan me-mount ulang drive secara aman (mendukung `-DriveLetter`). |
+| `.\scripts\Mount-Manager.ps1 -Action status` | Menampilkan PID, RAM, ukuran cache VFS, jumlah file dirty (belum selesai upload), dan status volume Explorer. |
+| `.\scripts\Mount-Manager.ps1 -Action test` | Memvalidasi `drives.json`, konflik antar-drive, jenis backend, status `client_id` Google Drive, dan remote di `rclone.conf`. |
+| `.\scripts\Mount-Manager.ps1 -Action version` | Menampilkan versi WinCloudMount yang terpasang. |
+| `-ConfigFile <path>` / `-UseExample` | Opsi tambahan untuk menjalankan `start`, `restart`, atau `test` memakai file konfigurasi khusus atau `config\drives.example.json`. |
 
 ---
 
@@ -258,11 +289,9 @@ Kenapa ini tidak sirkular: one-liner mengambil `install.ps1` dari `main` lewat `
 
 ---
 
-## 🤝 Kontribusi (Contributing)
+## 🤝 Kontribusi
 
-> [!NOTE]
-> **Bagian ini belum diterjemahkan ke Bahasa Indonesia.**  
-> Panduan kontribusi, alur pull request, dan standar kode tersedia dalam bahasa Inggris di [README.md - Contributing](README.md#-contributing).
+Kontribusi kode, laporan bug, maupun peningkatan dokumentasi selalu terbuka. Baca panduan branching, konvensi commit, dan standar kualitas kode di [CONTRIBUTING.md](CONTRIBUTING.md) sebelum mengirim Pull Request.
 
 ---
 
